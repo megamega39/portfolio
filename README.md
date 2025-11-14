@@ -45,7 +45,6 @@
 ### バックエンド:
 Ruby on Rails 7.2.1（APIモード）
 地図上のピン情報・ユーザー情報をJSON形式で提供するAPIサーバーとして構築します。
-Rails標準のActionCableを利用し、リアルタイム通信を実現します。
 
 ### データベース:
 PostgreSQL 15
