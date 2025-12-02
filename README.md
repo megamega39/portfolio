@@ -78,3 +78,6 @@ Railsアプリ・PostgreSQLをFly.io上でデプロイします。
 
 ### 画面遷移図
 Figma：https://www.figma.com/design/mHTKGYHX9PLVKBJAesF5LU/%E3%83%9E%E3%82%B0%E3%83%AD%E3%83%9E%E3%83%83%E3%83%97?node-id=0-1&t=GNRBKevq2nyDFXqh-1
+
+### ER図
+https://gyazo.com/b9b81d7c35af5b27b82fdc336ca25d67
