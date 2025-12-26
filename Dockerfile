@@ -47,10 +47,15 @@ RUN bundle install && \
 
 # Install node modules
 COPY package.json yarn.lock ./
+# Copy Tailwind config files before yarn install
+COPY tailwind.config.js postcss.config.js ./
 RUN yarn install --frozen-lockfile
 
 # Copy application code
 COPY . .
+
+# Reinstall node modules to ensure package.json changes are reflected
+RUN yarn install --frozen-lockfile
 
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
