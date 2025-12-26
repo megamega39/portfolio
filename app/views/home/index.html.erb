@@ -1,1 +1,189 @@
-<div id="map" style="height: 100vh; width: 100%;"></div>
+<!-- ヘッダー -->
+<header class="bg-blue-600 text-white px-4 py-3 flex justify-between items-center z-50">
+  <div class="text-lg font-semibold">ロゴ</div>
+  <nav class="flex gap-4">
+    <button id="about-app-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">このアプリについて</button>
+    <button id="how-to-use-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">使い方</button>
+    <button id="terms-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">利用規約</button>
+  </nav>
+</header>
+
+<!-- 地図コンテナ -->
+<div class="flex-1 relative overflow-hidden">
+  <div id="map" class="absolute inset-0"></div>
+  
+  <!-- ピン登録ボタン（右下） -->
+  <button id="pin-registration-btn" class="absolute bottom-4 right-4 bg-white border border-gray-300 px-6 py-3 rounded shadow-lg hover:bg-gray-50 transition-colors z-40">
+    ピン登録
+  </button>
+</div>
+
+<!-- モーダル：このアプリについて -->
+<div id="about-app-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md max-h-[80vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">このアプリについて</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('about-app-modal')">&times;</button>
+    </div>
+    <div class="text-gray-700">
+      <p class="mb-4">マグロマップは、フードデリバリー配達員向けの単価共有Webアプリです。</p>
+      <p class="mb-4">地図上に高単価案件（マグロ/クジラ）をピン表示し、配達員同士で情報を共有できます。</p>
+      <p>3000〜5999円の案件はマグロアイコン、6000円以上の案件はクジラアイコンで表示されます。</p>
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button onclick="closeModal('about-app-modal')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
+        閉じる
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル：使い方 -->
+<div id="how-to-use-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md max-h-[80vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">使い方</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('how-to-use-modal')">&times;</button>
+    </div>
+    <div class="text-gray-700 space-y-4">
+      <div>
+        <h3 class="font-semibold mb-2">1. ピンの登録</h3>
+        <p>右下の「ピン登録」ボタンをクリックし、地図上で位置を選択して情報を入力してください。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">2. ピンの確認</h3>
+        <p>地図上のピンをクリックすると、詳細情報（金額・距離・時間帯・天候）が表示されます。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">3. ピンの削除</h3>
+        <p>ピンをクリックして表示されたモーダルから「削除」ボタンで削除できます。</p>
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button onclick="closeModal('how-to-use-modal')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
+        閉じる
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル：利用規約 -->
+<div id="terms-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md max-h-[80vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">利用規約</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('terms-modal')">&times;</button>
+    </div>
+    <div class="text-gray-700 space-y-4">
+      <div>
+        <h3 class="font-semibold mb-2">第1条（適用）</h3>
+        <p>本規約は、マグロマップ（以下「本サービス」）の利用条件を定めるものです。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">第2条（利用）</h3>
+        <p>本サービスは、フードデリバリー配達員向けの情報共有を目的としています。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">第3条（禁止事項）</h3>
+        <p>虚偽の情報の投稿、他者への誹謗中傷、法令違反行為を禁止します。</p>
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button onclick="closeModal('terms-modal')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
+        閉じる
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル：ピン登録 -->
+<div id="pin-registration-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">ピン登録</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('pin-registration-modal')">&times;</button>
+    </div>
+    
+    <form id="pin-registration-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">金額（円）</label>
+        <input type="number" id="reg-price" class="w-full border border-gray-300 rounded px-3 py-2" required min="0">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">配達距離（km）</label>
+        <input type="number" id="reg-distance" class="w-full border border-gray-300 rounded px-3 py-2" required min="0" step="0.1">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">時間帯</label>
+        <select id="reg-time-slot" class="w-full border border-gray-300 rounded px-3 py-2" required>
+          <option value="">選択してください</option>
+          <option value="朝">朝（6:00-10:00）</option>
+          <option value="昼">昼（10:00-14:00）</option>
+          <option value="夕方">夕方（14:00-18:00）</option>
+          <option value="夜">夜（18:00-22:00）</option>
+          <option value="深夜">深夜（22:00-6:00）</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">天候</label>
+        <select id="reg-weather" class="w-full border border-gray-300 rounded px-3 py-2" required>
+          <option value="">選択してください</option>
+          <option value="晴れ">晴れ</option>
+          <option value="曇り">曇り</option>
+          <option value="雨">雨</option>
+          <option value="雪">雪</option>
+        </select>
+      </div>
+      
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('pin-registration-modal')" class="bg-gray-200 border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 transition-colors">
+          キャンセル
+        </button>
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
+          登録
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- モーダル：ピン情報表示・削除 -->
+<div id="pin-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">ピン情報表示・削除</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('pin-modal')">&times;</button>
+    </div>
+    
+    <div class="space-y-4 mb-6">
+      <div class="flex items-center">
+        <label class="w-24 text-sm font-medium">金額</label>
+        <input type="text" id="modal-price" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
+      
+      <div class="flex items-center">
+        <label class="w-24 text-sm font-medium">配達距離</label>
+        <input type="text" id="modal-distance" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
+      
+      <div class="flex items-center">
+        <label class="w-24 text-sm font-medium">時間帯</label>
+        <input type="text" id="modal-time-slot" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
+      
+      <div class="flex items-center">
+        <label class="w-24 text-sm font-medium">天候</label>
+        <input type="text" id="modal-weather" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
+    </div>
+    
+    <div class="flex justify-end">
+      <button id="modal-delete-btn" class="bg-gray-200 border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 transition-colors">
+        削除
+      </button>
+    </div>
+  </div>
+</div>
