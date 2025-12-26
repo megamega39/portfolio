@@ -1,5 +1,11 @@
 {
   "dependencies": {
-    "leaflet": "^1.9.4"
+    "maplibre-gl": "^3.6.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  },
+  "scripts": {
+    "build": "esbuild app/javascript/*.* --bundle --sourcemap --format=esm --outdir=app/assets/builds --public-path=/assets --loader:.png=file --loader:.svg=file"
   }
 }
