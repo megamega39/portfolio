@@ -1,10 +1,21 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
 
-// 表示する都市（必要なら増やせます）
+// 表示する都市
 const CITY = {
-    tokyo: { center: [139.767125, 35.681236], zoom: 12 },
-    osaka: { center: [135.502253, 34.693725], zoom: 12 },
+    tokyo: { center: [139.767125, 35.681236], zoom: 12 },      // 東京
+    kanagawa: { center: [139.638026, 35.443707], zoom: 12 },   // 神奈川（横浜）
+    chiba: { center: [140.1233, 35.6074], zoom: 12 },          // 千葉
+    saitama: { center: [139.6489, 35.8617], zoom: 12 },       // 埼玉
+    osaka: { center: [135.502253, 34.693725], zoom: 12 },      // 大阪
+    hyogo: { center: [135.1957, 34.6903], zoom: 12 },         // 兵庫（神戸）
+    kyoto: { center: [135.7681, 35.0116], zoom: 12 },         // 京都
+    fukuoka: { center: [130.4017, 33.5904], zoom: 12 },       // 福岡
+    aichi: { center: [136.9066, 35.1815], zoom: 12 },          // 愛知（名古屋）
+    hokkaido: { center: [141.3544, 43.0642], zoom: 12 },      // 北海道（札幌）
+    miyagi: { center: [140.8694, 38.2682], zoom: 12 },        // 宮城（仙台）
+    hiroshima: { center: [132.4553, 34.3853], zoom: 12 },     // 広島
+    okinawa: { center: [127.6809, 26.2124], zoom: 12 },       // 沖縄（那覇）
 };
 
 function getCityFromUrl() {
@@ -145,6 +156,48 @@ function initMap() {
 
     window.__map = map;
     window.__updatePinVisibility = updatePinVisibility; // グローバルに公開（必要に応じて）
+
+    // 都市リンクの初期化
+    initCityLinks(map);
+}
+
+// 都市リンクの初期化
+function initCityLinks(map) {
+    const cityLinks = document.querySelectorAll(".city-link");
+
+    cityLinks.forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            const cityKey = link.dataset.city;
+
+            if (CITY[cityKey] && map) {
+                const { center, zoom } = CITY[cityKey];
+
+                // 地図の中心を移動（アニメーション付き）
+                map.flyTo({
+                    center: center,
+                    zoom: zoom,
+                    duration: 1000 // 1秒で移動
+                });
+
+                // アクティブなリンクのスタイルを更新
+                cityLinks.forEach(l => {
+                    l.classList.remove("bg-blue-700", "font-bold");
+                    l.classList.add("bg-transparent");
+                });
+                link.classList.add("bg-blue-700", "font-bold");
+                link.classList.remove("bg-transparent");
+            }
+        });
+    });
+
+    // 初期状態で現在の都市をハイライト
+    const cityKey = getCityFromUrl();
+    const activeLink = document.querySelector(`.city-link[data-city="${cityKey}"]`);
+    if (activeLink) {
+        activeLink.classList.add("bg-blue-700", "font-bold");
+        activeLink.classList.remove("bg-transparent");
+    }
 }
 
 // ピンのマーカーを管理するオブジェクト
@@ -485,6 +538,14 @@ function closeModal(modalId) {
 
 // モーダルの初期化
 function initModal() {
+    // ロゴのクリックイベント（ページ更新）
+    const logo = document.getElementById("logo");
+    if (logo) {
+        logo.addEventListener("click", () => {
+            window.location.reload();
+        });
+    }
+
     // ヘッダーのボタンにイベントリスナーを追加
     const aboutAppBtn = document.getElementById("about-app-btn");
     const howToUseBtn = document.getElementById("how-to-use-btn");

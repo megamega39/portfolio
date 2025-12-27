@@ -1,7 +1,7 @@
 <!-- ヘッダー -->
 <header class="bg-blue-600 text-white px-4 py-3 flex justify-between items-center z-50">
   <div class="flex items-center">
-    <%= image_tag "magurologo.png", alt: "マグロマップ", class: "h-8 w-auto" %>
+    <%= image_tag "magurologo.png", alt: "マグロマップ", id: "logo", class: "h-8 w-auto cursor-pointer" %>
   </div>
   <nav class="flex gap-4">
     <button id="about-app-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">このアプリについて</button>
@@ -9,6 +9,24 @@
     <button id="terms-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">利用規約</button>
   </nav>
 </header>
+
+<!-- 都市ナビゲーション -->
+<nav class="bg-blue-500 text-white px-4 py-2 flex gap-4 items-center z-40 flex-wrap">
+  <span class="text-sm font-medium">主要都市:</span>
+  <button data-city="tokyo" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">東京</button>
+  <button data-city="kanagawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">横浜</button>
+  <button data-city="chiba" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">千葉</button>
+  <button data-city="saitama" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">埼玉</button>
+  <button data-city="osaka" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">大阪</button>
+  <button data-city="hyogo" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">兵庫</button>
+  <button data-city="kyoto" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">京都</button>
+  <button data-city="fukuoka" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">福岡</button>
+  <button data-city="aichi" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">愛知</button>
+  <button data-city="hokkaido" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">北海道</button>
+  <button data-city="miyagi" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">宮城</button>
+  <button data-city="hiroshima" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">広島</button>
+  <button data-city="okinawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">沖縄</button>
+</nav>
 
 <!-- 地図コンテナ -->
 <div class="flex-1 relative overflow-hidden">
