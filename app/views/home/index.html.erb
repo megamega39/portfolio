@@ -51,9 +51,11 @@
       <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('about-app-modal')">&times;</button>
     </div>
     <div class="text-gray-700">
-      <p class="mb-4">マグロマップは、フードデリバリー配達員向けの単価共有Webアプリです。</p>
-      <p class="mb-4">地図上に高単価案件（マグロ/クジラ）をピン表示し、配達員同士で情報を共有できます。</p>
-      <p>3000〜5999円の案件はマグロアイコン、6000円以上の案件はクジラアイコンで表示されます。</p>
+      <p class="mb-4">マグロマップは、フードデリバリー配達員向けに<br>高単価案件が出やすいエリアを地図で共有するWebアプリです。</p>
+      <p class="mb-4">配達中に受けた案件の単価を地図上にピンとして登録し、<br>他の配達員と情報を共有することができます。</p>
+      <p class="mb-2">3000〜5999円の案件は 🐟 マグロアイコン</p>
+      <p class="mb-2">6000円以上の案件は 🐋 クジラアイコン</p>
+      <p>として表示され、一目で高単価エリアを把握できます。</p>
     </div>
     <div class="mt-6 flex justify-end">
       <button onclick="closeModal('about-app-modal')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
@@ -94,7 +96,7 @@
 
 <!-- モーダル：利用規約 -->
 <div id="terms-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md max-h-[80vh] overflow-y-auto">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-w-[90vw] max-h-[85vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-bold">利用規約</h2>
       <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('terms-modal')">&times;</button>
@@ -102,15 +104,37 @@
     <div class="text-gray-700 space-y-4">
       <div>
         <h3 class="font-semibold mb-2">第1条（適用）</h3>
-        <p>本規約は、マグロマップ（以下「本サービス」）の利用条件を定めるものです。</p>
+        <p>本規約は、マグロマップ（以下「本サービス」）の利用条件を定めるものです。<br>ユーザーは、本サービスを利用することにより、本規約に同意したものとみなします。</p>
       </div>
       <div>
-        <h3 class="font-semibold mb-2">第2条（利用）</h3>
-        <p>本サービスは、フードデリバリー配達員向けの情報共有を目的としています。</p>
+        <h3 class="font-semibold mb-2">第2条（サービス内容）</h3>
+        <p>本サービスは、フードデリバリー配達員向けに、案件の単価や発生エリアに関する情報を地図上で共有することを目的としたWebサービスです。<br>本サービスは、特定の配達プラットフォームとは一切関係のない非公式サービスです。</p>
       </div>
       <div>
         <h3 class="font-semibold mb-2">第3条（禁止事項）</h3>
-        <p>虚偽の情報の投稿、他者への誹謗中傷、法令違反行為を禁止します。</p>
+        <p>ユーザーは、以下の行為を行ってはなりません。</p>
+        <ul class="list-disc list-inside ml-4 mt-2 space-y-1">
+          <li>虚偽または誤解を招く情報の投稿</li>
+          <li>他のユーザーまたは第三者への誹謗中傷</li>
+          <li>法令または公序良俗に反する行為</li>
+          <li>本サービスの運営を妨害する行為</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">第4条（投稿情報について）</h3>
+        <p>ユーザーが投稿した情報は、他のユーザーが閲覧できる状態で表示されます。<br>投稿内容の正確性・完全性について、本サービスは一切保証しません。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">第5条（免責事項）</h3>
+        <p>本サービスの利用により生じた損害について、運営者は一切の責任を負いません。<br>本サービス上の情報は参考情報であり、実際の報酬や条件を保証するものではありません。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">第6条（サービスの変更・停止）</h3>
+        <p>運営者は、事前の通知なく、本サービスの内容を変更または提供を停止することがあります。</p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">第7条（規約の変更）</h3>
+        <p>本規約は、必要に応じて予告なく変更されることがあります。<br>変更後の規約は、本サービス上に掲載された時点から効力を有します。</p>
       </div>
     </div>
     <div class="mt-6 flex justify-end">
@@ -177,11 +201,11 @@
   </div>
 </div>
 
-<!-- モーダル：ピン情報表示・削除 -->
+<!-- モーダル：ピン情報 -->
 <div id="pin-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
   <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold">ピン情報表示・削除</h2>
+      <h2 class="text-xl font-bold">ピン情報</h2>
       <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('pin-modal')">&times;</button>
     </div>
     
@@ -208,7 +232,7 @@
     </div>
     
     <div class="flex justify-end">
-      <button id="modal-delete-btn" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 transition-colors">
+      <button id="modal-delete-btn" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-400">
         削除
       </button>
     </div>

@@ -485,15 +485,14 @@ function showPinDetails(pin) {
     const storedToken = localStorage.getItem(`pin_delete_token_${pin.id}`);
     modal.dataset.deleteToken = storedToken || "";
 
-    // 削除トークンがない場合は削除ボタンを無効化
+    // 削除トークンがない場合は削除ボタンを非表示
     const deleteBtn = document.getElementById("modal-delete-btn");
     if (deleteBtn) {
         if (storedToken) {
+            deleteBtn.classList.remove("hidden");
             deleteBtn.disabled = false;
-            deleteBtn.textContent = "削除";
         } else {
-            deleteBtn.disabled = true;
-            deleteBtn.textContent = "削除不可（トークンなし）";
+            deleteBtn.classList.add("hidden");
         }
     }
 
