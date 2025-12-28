@@ -66,27 +66,22 @@ function initMap() {
         ]
     });
 
-    // 地図の読み込み完了後の処理
-    // 重要: 地図が完全に読み込まれてからピンを読み込む
-    const loadPinsAfterMapLoad = () => {
-        console.log("地図の読み込みが完了しました");
+    // ロード検知ロジック：イベントリスナーを先に登録してから、loaded()をチェック
+    const startApp = () => {
+        console.log("地図のロード完了を検知しました。ピンデータを読み込みます。");
         map.resize();
-        // 少し待ってからピンを読み込む（地図の描画が完全に終わるまで）
-        setTimeout(() => {
-            console.log("ピンの読み込みを開始します");
-            loadPins(map);
-        }, 100);
+        loadPins(map);
     };
 
-    // 地図のloadイベントを待つ
+    // 1. まずイベントリスナーを登録（これが重要）
+    map.once('load', startApp);
+
+    // 2. その直後に「もし既にロード済みなら」手動で発火させる
+    // map.loaded() が true なら、上記のリスナーは発火しない可能性があるため
     if (map.loaded()) {
-        // 地図が既に読み込まれている場合
-        console.log("地図は既に読み込まれています");
-        map.resize();
-        loadPinsAfterMapLoad();
-    } else {
-        // 地図の読み込みを待つ
-        map.once("load", loadPinsAfterMapLoad);
+        // リスナーを解除して（二重実行防止）、即時実行
+        map.off('load', startApp);
+        startApp();
     }
 
     // ウィンドウリサイズ時にもリサイズ
@@ -210,21 +205,8 @@ async function loadPins(map) {
         return;
     }
 
-    // 地図が完全に読み込まれているか確認
-    if (!map.loaded()) {
-        console.log("地図がまだ読み込まれていません。読み込み完了を待ちます...");
-        map.once("load", () => {
-            console.log("地図の読み込みが完了したので、ピンを読み込みます");
-            // 地図の描画が完全に終わるまで少し待つ
-            setTimeout(() => {
-                loadPins(map);
-            }, 100);
-        });
-        return;
-    }
-
-    // 地図が読み込まれていることを確認
-    console.log("地図の読み込み状態:", map.loaded());
+    // 注意: initMap側で既にロード完了を検知してから呼び出されるため、
+    // ここでのloaded()チェックは不要（MapLibreの仕様上、loadイベント発火直後でもloaded()がfalseを返すことがある）
 
     try {
         console.log("ピンデータを取得中...");
@@ -238,8 +220,18 @@ async function loadPins(map) {
         const result = await response.json();
         console.log("APIレスポンス:", result);
 
-        if (result.status === "success" && result.data && Array.isArray(result.data)) {
-            console.log(`取得したピン数: ${result.data.length}件`);
+        // データを正規化（配列そのものが来るか、dataプロパティに来るか両対応）
+        let pinsData = [];
+        if (Array.isArray(result)) {
+            pinsData = result; // Rails標準の配列形式
+            console.log("配列が直接返されました");
+        } else if (result.data && Array.isArray(result.data)) {
+            pinsData = result.data; // ラッパー形式
+            console.log("dataプロパティ内の配列を使用");
+        }
+
+        if (pinsData.length > 0) {
+            console.log(`有効なピンデータ: ${pinsData.length}件`);
 
             // 既存のマーカーを削除（MapLibreの標準メソッドを使用）
             const markerCount = Object.keys(pinMarkers).length;
@@ -254,9 +246,9 @@ async function loadPins(map) {
                 Object.keys(pinMarkers).forEach(key => delete pinMarkers[key]);
             }
 
-            // 新しいピンを表示（地図が完全に読み込まれた後に追加）
+            // pinsData でループ
             let successCount = 0;
-            result.data.forEach((pin, index) => {
+            pinsData.forEach((pin, index) => {
                 console.log(`ピン${index + 1}を追加中:`, pin);
                 try {
                     addPinToMap(map, pin);
@@ -265,20 +257,14 @@ async function loadPins(map) {
                     console.error(`ピン${index + 1}の追加に失敗:`, error, pin);
                 }
             });
-            console.log(`ピンを${successCount}/${result.data.length}件表示しました`);
+            console.log(`${pinsData.length}件のピンを表示しました`);
 
             // ピン追加後、現在のズームレベルに応じて表示/非表示を更新
             if (window.__updatePinVisibility) {
                 window.__updatePinVisibility();
             }
         } else {
-            console.warn("ピンデータが取得できませんでした:", result);
-            if (!result.data) {
-                console.warn("result.dataが存在しません");
-            }
-            if (!Array.isArray(result.data)) {
-                console.warn("result.dataが配列ではありません:", typeof result.data);
-            }
+            console.warn("表示できるピンがありません", result);
         }
     } catch (error) {
         console.error("ピンの読み込みに失敗しました:", error);
@@ -398,14 +384,8 @@ function addPinToMap(map, pin) {
             return;
         }
 
-        // 地図が完全に読み込まれているか確認
-        if (!map.loaded()) {
-            console.warn("地図がまだ読み込まれていません。読み込み完了を待ちます...");
-            map.once("load", () => {
-                addPinToMap(map, pin);
-            });
-            return;
-        }
+        // 注意: marker.addTo(map) は地図がロード中であっても実行可能です（ロード完了後に自動的に表示されます）
+        // そのため、ここでのloaded()チェックは不要です
 
         // マーカーを作成（座標を直接指定）
         console.log(`マーカーを作成中: 経度=${longitude} (型: ${typeof longitude}), 緯度=${latitude} (型: ${typeof latitude})`);
@@ -634,17 +614,38 @@ function initModal() {
             // 金額を取得してバリデーション
             const price = parseInt(document.getElementById("reg-price").value);
 
-            // 金額のバリデーション（3000円以上である必要がある）
-            if (isNaN(price) || price < 3000) {
-                alert("金額は3000円以上である必要があります。");
+            // 金額のバリデーション（3000円以上9999円以下である必要がある）
+            if (isNaN(price) || price < 3000 || price > 9999) {
+                alert("金額は3000円以上9999円以下である必要があります。");
                 document.getElementById("reg-price").focus();
                 return;
+            }
+
+            // 配達距離を取得してバリデーション
+            const distance = parseFloat(document.getElementById("reg-distance").value);
+
+            // 配達距離のバリデーション（0.1km以上99.9km以下、小数点1桁まで）
+            if (isNaN(distance) || distance < 0.1 || distance > 99.9) {
+                alert("配達距離は0.1km以上99.9km以下である必要があります（小数点1桁まで）。");
+                document.getElementById("reg-distance").focus();
+                return;
+            }
+
+            // 小数点以下2桁以上が入力されていないかチェック
+            const distanceStr = document.getElementById("reg-distance").value;
+            if (distanceStr.includes(".")) {
+                const decimalPart = distanceStr.split(".")[1];
+                if (decimalPart && decimalPart.length > 1) {
+                    alert("配達距離は小数点1桁までしか入力できません。");
+                    document.getElementById("reg-distance").focus();
+                    return;
+                }
             }
 
             const formData = {
                 pin: {
                     price: price,
-                    distance_km: parseFloat(document.getElementById("reg-distance").value),
+                    distance_km: distance,
                     time_slot: document.getElementById("reg-time-slot").value,
                     weather: document.getElementById("reg-weather").value,
                     lat: lat,  // 緯度（latitude）- 数値型
@@ -1000,27 +1001,18 @@ window.loadPins = loadPins;
 // 地図とモーダルの初期化
 function initializeApp() {
     console.log("アプリを初期化します");
+
+    // 既存の地図インスタンスがある場合のクリーンアップ処理（Turbo Drive対策）
+    if (window.__map) {
+        window.__map.remove();
+        window.__map = null;
+    }
+    // マーカー配列もリセット
+    Object.keys(pinMarkers).forEach(key => delete pinMarkers[key]);
+
     initMap();
     initModal();
-
-    // 念のため、少し待ってからピンを再読み込み（地図が完全に初期化されるまで）
-    setTimeout(() => {
-        const map = window.__map;
-        if (map) {
-            if (map.loaded()) {
-                console.log("初期化後のピン再読み込みを実行します（地図は既に読み込まれています）");
-                loadPins(map);
-            } else {
-                console.log("地図の読み込みを待ってからピンを読み込みます");
-                map.once("load", () => {
-                    console.log("地図の読み込みが完了したので、ピンを読み込みます");
-                    setTimeout(() => {
-                        loadPins(map);
-                    }, 100);
-                });
-            }
-        }
-    }, 500);
+    // initMap内でloadPins(map)が呼ばれるため、ここでの重複処理は不要
 }
 
 document.addEventListener("DOMContentLoaded", () => {
