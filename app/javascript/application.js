@@ -4,7 +4,7 @@ import maplibregl from "maplibre-gl";
 // 表示する都市
 const CITY = {
     tokyo: { center: [139.767125, 35.681236], zoom: 12 },      // 東京
-    kanagawa: { center: [139.638026, 35.443707], zoom: 12 },   // 神奈川（横浜）
+    kanagawa: { center: [139.638026, 35.443707], zoom: 12 },   // 神奈川
     chiba: { center: [140.1233, 35.6074], zoom: 12 },          // 千葉
     saitama: { center: [139.6489, 35.8617], zoom: 12 },       // 埼玉
     osaka: { center: [135.502253, 34.693725], zoom: 12 },      // 大阪
