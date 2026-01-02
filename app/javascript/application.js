@@ -220,21 +220,6 @@ function createMapWithCenter(center, zoom) {
                 }
             }
         });
-
-        const visibleCount = Object.values(pinMarkers).filter(marker => {
-            if (marker && marker.getElement) {
-                const el = marker.getElement();
-                if (el) {
-                    const parent = el.parentElement;
-                    if (parent && parent.classList.contains("maplibregl-marker")) {
-                        return parent.style.display !== "none";
-                    }
-                    return el.style.display !== "none";
-                }
-            }
-            return false;
-        }).length;
-
     };
 
     // ズームイベントを監視（moveendイベントでも更新）
@@ -520,9 +505,6 @@ async function loadPins(map) {
         let pinsData = [];
         if (Array.isArray(result.data)) {
             pinsData = result.data;
-        } else if (result.response && Array.isArray(result.response)) {
-            // フォールバック: レスポンスが直接配列の場合
-            pinsData = result.response;
         }
 
         // 自分のピンのみ表示モードの場合、フィルタリング
@@ -1520,28 +1502,6 @@ function initModal() {
 window.openModal = openModal;
 window.closeModal = closeModal;
 
-// モーダルを表示する関数（ピンクリック時に呼び出す）
-function showPinModal(pinData) {
-    const modal = document.getElementById("pin-modal");
-    if (!modal) return;
-
-    // モーダルにデータを設定
-    document.getElementById("modal-price").value = pinData.price || "";
-    document.getElementById("modal-distance").value = pinData.distance || "";
-    document.getElementById("modal-time-slot").value = pinData.timeSlot || "";
-    document.getElementById("modal-weather").value = pinData.weather || "";
-
-    modal.classList.remove("hidden");
-}
-
-// モーダルを閉じる関数
-function hidePinModal() {
-    const modal = document.getElementById("pin-modal");
-    if (modal) {
-        modal.classList.add("hidden");
-    }
-}
-
 // 登録モードを有効化（中央固定ピン方式）
 function enableRegistrationMode() {
     const map = window.__map;
@@ -1735,8 +1695,6 @@ closeModal = function (modalId) {
 };
 
 // グローバルに公開
-window.showPinModal = showPinModal;
-window.hidePinModal = hidePinModal;
 window.loadPins = loadPins;
 
 // 地図とモーダルの初期化
