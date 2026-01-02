@@ -611,12 +611,16 @@ function addPinToMap(map, pin) {
 
         if (pin.icon_type === "whale") {
             // クジラアイコン（6000円以上）
-            // transition-noneクラスとインラインスタイルでアニメーションを無効化
-            iconHtml = `<div class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; font-size: 30px; line-height: ${iconSize}px; text-align: center; transition: none !important;">🐋</div>`;
+            // 画像を使用してPCとスマホで統一されたデザインにする
+            // Railsのアセットパイプライン経由で画像を参照
+            const whaleIconPath = getImagePath("whale-icon.png");
+            iconHtml = `<img src="${whaleIconPath}" alt="クジラ" class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; object-fit: contain; display: block; transition: none !important; max-width: none !important; user-select: none; -webkit-user-select: none; pointer-events: none;" draggable="false" onerror="this.style.display='none'; console.error('画像の読み込みに失敗しました:', this.src);">`;
         } else if (pin.icon_type === "tuna") {
             // マグロアイコン（3000〜5999円）
-            // transition-noneクラスとインラインスタイルでアニメーションを無効化
-            iconHtml = `<div class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; font-size: 30px; line-height: ${iconSize}px; text-align: center; transition: none !important;">🐟</div>`;
+            // 画像を使用してPCとスマホで統一されたデザインにする
+            // Railsのアセットパイプライン経由で画像を参照
+            const tunaIconPath = getImagePath("tuna-icon.png");
+            iconHtml = `<img src="${tunaIconPath}" alt="マグロ" class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; object-fit: contain; display: block; transition: none !important; max-width: none !important; user-select: none; -webkit-user-select: none; pointer-events: none;" draggable="false" onerror="this.style.display='none'; console.error('画像の読み込みに失敗しました:', this.src);">`;
         } else {
             // 通常のピン（3000円未満）
             // transition-noneクラスとインラインスタイルでアニメーションを無効化
@@ -857,6 +861,22 @@ function getCurrentUserId() {
 function getCSRFToken() {
     const token = document.querySelector('meta[name="csrf-token"]');
     return token ? token.getAttribute('content') : '';
+}
+
+// 画像パスを取得する関数（Railsのアセットパイプライン対応）
+function getImagePath(imageName) {
+    // ヘッダーのdata属性から画像パスを取得（Railsのimage_pathヘルパーで生成されたパス）
+    const header = document.querySelector("header");
+    if (header) {
+        if (imageName === "whale-icon.png" && header.dataset.whaleIcon) {
+            return header.dataset.whaleIcon;
+        }
+        if (imageName === "tuna-icon.png" && header.dataset.tunaIcon) {
+            return header.dataset.tunaIcon;
+        }
+    }
+    // フォールバック: アセットパイプライン経由のパス
+    return `/assets/${imageName}`;
 }
 
 // トグルボタンの見た目を更新
