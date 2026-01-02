@@ -1,6 +1,26 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
 
+// ============================================================================
+// 定数定義
+// ============================================================================
+
+// ピン設定
+const PIN_CONFIG = {
+    ICON_SIZE: 40,              // ピンアイコンのサイズ（px）
+    MIN_ZOOM_LEVEL: 10,         // ピンを表示する最小ズームレベル
+    MIN_PRICE: 3000,            // 最小価格（円）
+    MAX_PRICE: 9999,            // 最大価格（円）
+    WHALE_THRESHOLD: 6000,      // クジラアイコンを表示する価格の閾値（円）
+    MIN_DISTANCE: 0.1,          // 最小配達距離（km）
+    MAX_DISTANCE: 99.9          // 最大配達距離（km）
+};
+
+// 地図設定
+const MAP_CONFIG = {
+    FLY_TO_DURATION: 1000       // 地図移動アニメーションの時間（ミリ秒）
+};
+
 // 表示する都市
 const CITY = {
     tokyo: { center: [139.767125, 35.681236], zoom: 12 },      // 東京
@@ -17,6 +37,58 @@ const CITY = {
     hiroshima: { center: [132.4553, 34.3853], zoom: 12 },     // 広島
     okinawa: { center: [127.6809, 26.2124], zoom: 12 },       // 沖縄（那覇）
 };
+
+// ============================================================================
+// ユーティリティ関数
+// ============================================================================
+
+/**
+ * 座標の妥当性を検証する
+ * @param {number|string} lng - 経度
+ * @param {number|string} lat - 緯度
+ * @returns {{valid: boolean, lng?: number, lat?: number, error?: string}} 検証結果
+ */
+function validateCoordinates(lng, lat) {
+    const longitude = Number(lng);
+    const latitude = Number(lat);
+
+    // NaNチェック
+    if (isNaN(longitude) || isNaN(latitude)) {
+        return { valid: false, error: "座標が無効です（NaN）" };
+    }
+
+    // 経度の範囲チェック（-180 ～ 180）
+    if (longitude < -180 || longitude > 180) {
+        return { valid: false, error: "経度が範囲外です（-180～180の範囲で入力してください）" };
+    }
+
+    // 緯度の範囲チェック（-90 ～ 90）
+    if (latitude < -90 || latitude > 90) {
+        return { valid: false, error: "緯度が範囲外です（-90～90の範囲で入力してください）" };
+    }
+
+    return { valid: true, lng: longitude, lat: latitude };
+}
+
+/**
+ * ボタンをハイライト表示する
+ * @param {HTMLElement} element - ハイライトする要素
+ */
+function highlightButton(element) {
+    if (!element) return;
+    element.classList.add("bg-blue-700", "font-bold");
+    element.classList.remove("bg-transparent");
+}
+
+/**
+ * ボタンのハイライトを解除する
+ * @param {HTMLElement} element - ハイライトを解除する要素
+ */
+function clearButtonHighlight(element) {
+    if (!element) return;
+    element.classList.remove("bg-blue-700", "font-bold");
+    element.classList.add("bg-transparent");
+}
 
 function getCityFromUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -43,8 +115,7 @@ function initMap() {
             // マイエリアボタンをハイライト
             const myAreaBtn = document.getElementById("my-area-btn");
             if (myAreaBtn) {
-                myAreaBtn.classList.add("bg-blue-700", "font-bold");
-                myAreaBtn.classList.remove("bg-transparent");
+                highlightButton(myAreaBtn);
             }
         } else {
             // マイエリアが未登録の場合は都市データを使用
@@ -96,7 +167,6 @@ function createMapWithCenter(center, zoom) {
 
     // ロード検知ロジック：イベントリスナーを先に登録してから、loaded()をチェック
     const startApp = () => {
-        console.log("地図のロード完了を検知しました。ピンデータを読み込みます。");
         map.resize();
         loadPins(map);
     };
@@ -122,7 +192,7 @@ function createMapWithCenter(center, zoom) {
     // ズームレベルに応じてピンの表示/非表示を切り替える
     const updatePinVisibility = () => {
         const currentZoom = map.getZoom();
-        const minZoom = 10; // ズームレベル10未満でピンを非表示
+        const minZoom = PIN_CONFIG.MIN_ZOOM_LEVEL;
 
         // すべてのマーカーの表示/非表示を切り替え
         Object.values(pinMarkers).forEach(marker => {
@@ -165,7 +235,6 @@ function createMapWithCenter(center, zoom) {
             return false;
         }).length;
 
-        console.log(`ズームレベル: ${currentZoom.toFixed(2)}, ピン表示: ${currentZoom >= minZoom ? "ON" : "OFF"} (表示中: ${visibleCount}/${Object.keys(pinMarkers).length}件)`);
     };
 
     // ズームイベントを監視（moveendイベントでも更新）
@@ -244,15 +313,14 @@ function initMyAreaButton(map) {
             map.flyTo({
                 center: [myArea.lng, myArea.lat],
                 zoom: myArea.zoom,
-                duration: 1000
+                duration: MAP_CONFIG.FLY_TO_DURATION
             });
 
             // 都市リンクのハイライトをクリア
             clearCityLinksHighlight();
 
             // マイエリアボタンをハイライト
-            myAreaBtn.classList.add("bg-blue-700", "font-bold");
-            myAreaBtn.classList.remove("bg-transparent");
+            highlightButton(myAreaBtn);
         } else {
             // マイエリアが未登録の場合は設定モーダルを開く
             openModal("my-area-modal");
@@ -267,8 +335,7 @@ function initMyAreaButton(map) {
 function clearCityLinksHighlight() {
     const cityLinks = document.querySelectorAll(".city-link");
     cityLinks.forEach(link => {
-        link.classList.remove("bg-blue-700", "font-bold");
-        link.classList.add("bg-transparent");
+        clearButtonHighlight(link);
     });
 }
 
@@ -276,8 +343,7 @@ function clearCityLinksHighlight() {
 function clearMyAreaButtonHighlight() {
     const myAreaBtn = document.getElementById("my-area-btn");
     if (myAreaBtn) {
-        myAreaBtn.classList.remove("bg-blue-700", "font-bold");
-        myAreaBtn.classList.add("bg-transparent");
+        clearButtonHighlight(myAreaBtn);
     }
 }
 
@@ -305,7 +371,7 @@ function initMyAreaModal(map) {
                         map.flyTo({
                             center: [lng, lat],
                             zoom: zoom,
-                            duration: 1000
+                            duration: MAP_CONFIG.FLY_TO_DURATION
                         });
                     },
                     (error) => {
@@ -366,7 +432,6 @@ function initMyAreaModal(map) {
 
                     // レスポンスのContent-Typeを確認
                     const contentType = response.headers.get("content-type");
-                    console.log("マイエリア保存レスポンス - ステータス:", response.status, "Content-Type:", contentType);
 
                     let result;
                     if (contentType && contentType.includes("application/json")) {
@@ -377,8 +442,6 @@ function initMyAreaModal(map) {
                         console.error("JSON以外のレスポンス:", text);
                         throw new Error("サーバーからのレスポンスがJSON形式ではありません");
                     }
-
-                    console.log("マイエリア保存レスポンス:", result);
 
                     if (response.ok && result.status === "success") {
                         closeModal("my-area-modal");
@@ -450,16 +513,14 @@ function initCityLinks(map) {
                 map.flyTo({
                     center: center,
                     zoom: zoom,
-                    duration: 1000 // 1秒で移動
+                    duration: MAP_CONFIG.FLY_TO_DURATION
                 });
 
                 // アクティブなリンクのスタイルを更新
                 cityLinks.forEach(l => {
-                    l.classList.remove("bg-blue-700", "font-bold");
-                    l.classList.add("bg-transparent");
+                    clearButtonHighlight(l);
                 });
-                link.classList.add("bg-blue-700", "font-bold");
-                link.classList.remove("bg-transparent");
+                highlightButton(link);
 
                 // マイエリアボタンのハイライトをクリア
                 clearMyAreaButtonHighlight();
@@ -471,8 +532,7 @@ function initCityLinks(map) {
     const cityKey = getCityFromUrl();
     const activeLink = document.querySelector(`.city-link[data-city="${cityKey}"]`);
     if (activeLink) {
-        activeLink.classList.add("bg-blue-700", "font-bold");
-        activeLink.classList.remove("bg-transparent");
+        highlightButton(activeLink);
     }
 }
 
@@ -493,7 +553,6 @@ async function loadPins(map) {
     // ここでのloaded()チェックは不要（MapLibreの仕様上、loadイベント発火直後でもloaded()がfalseを返すことがある）
 
     try {
-        console.log("ピンデータを取得中...");
         const response = await fetch("/api/pins");
 
         if (!response.ok) {
@@ -502,51 +561,34 @@ async function loadPins(map) {
         }
 
         const result = await response.json();
-        console.log("APIレスポンス:", result);
 
         // データを正規化（配列そのものが来るか、dataプロパティに来るか両対応）
         let pinsData = [];
         if (Array.isArray(result)) {
             pinsData = result; // Rails標準の配列形式
-            console.log("配列が直接返されました");
         } else if (result.data && Array.isArray(result.data)) {
             pinsData = result.data; // ラッパー形式
-            console.log("dataプロパティ内の配列を使用");
         }
 
         // 自分のピンのみ表示モードの場合、フィルタリング
         if (showMyPinsOnly) {
             const currentUserId = getCurrentUserId();
-            console.log("フィルタリング開始: showMyPinsOnly=", showMyPinsOnly, "currentUserId=", currentUserId);
             if (currentUserId) {
-                const beforeCount = pinsData.length;
-                console.log("フィルタリング前のピン数:", beforeCount);
                 // user_idを数値に変換して比較（null/undefinedの場合は除外）
                 pinsData = pinsData.filter(pin => {
                     if (!pin.user_id) {
-                        console.log(`ピンID ${pin.id}: user_idがありません（未ログイン投稿）`);
                         return false; // user_idがないピン（未ログイン投稿）は除外
                     }
                     const pinUserId = typeof pin.user_id === 'number' ? pin.user_id : parseInt(pin.user_id, 10);
-                    const matches = pinUserId === currentUserId;
-                    if (matches) {
-                        console.log(`ピンID ${pin.id}: 自分のピン（user_id: ${pinUserId}）`);
-                    }
-                    return matches;
+                    return pinUserId === currentUserId;
                 });
-                console.log(`自分のピンのみ表示: ${beforeCount}件 → ${pinsData.length}件`);
-            } else {
-                console.warn("ユーザーIDが取得できませんでした。フィルタリングをスキップします。");
             }
-        } else {
-            console.log("全ピン表示モード");
         }
 
         // 既存のマーカーを削除（MapLibreの標準メソッドを使用）
         // フィルタリング前でも後でも、常に既存のマーカーを削除してから新しいマーカーを追加
         const markerCount = Object.keys(pinMarkers).length;
         if (markerCount > 0) {
-            console.log(`既存のマーカー${markerCount}件を削除します`);
             Object.values(pinMarkers).forEach(marker => {
                 if (marker && typeof marker.remove === "function") {
                     marker.remove();
@@ -557,20 +599,14 @@ async function loadPins(map) {
         }
 
         if (pinsData.length > 0) {
-            console.log(`有効なピンデータ: ${pinsData.length}件`);
-
             // pinsData でループ
-            let successCount = 0;
-            pinsData.forEach((pin, index) => {
-                console.log(`ピン${index + 1}を追加中:`, pin);
+            pinsData.forEach((pin) => {
                 try {
                     addPinToMap(map, pin);
-                    successCount++;
                 } catch (error) {
-                    console.error(`ピン${index + 1}の追加に失敗:`, error, pin);
+                    console.error("ピンの追加に失敗:", error, pin);
                 }
             });
-            console.log(`${pinsData.length}件のピンを表示しました`);
 
             // ピン追加後、現在のズームレベルに応じて表示/非表示を更新
             if (window.__updatePinVisibility) {
@@ -588,8 +624,6 @@ async function loadPins(map) {
 // 地図上にピンを追加
 function addPinToMap(map, pin) {
     try {
-        console.log("addPinToMap呼び出し:", pin);
-
         // 地図オブジェクトの確認
         if (!map) {
             console.error("地図オブジェクトが存在しません");
@@ -602,27 +636,25 @@ function addPinToMap(map, pin) {
             return;
         }
 
-        console.log(`座標確認: lng=${pin.lng}, lat=${pin.lat}`);
-
         // アイコンの種類に応じてマーカーのスタイルを決定
         // 重要: サイズを固定（width, height）し、位置調整用のCSS（margin, top, left, transform）は一切使用しない
         let iconHtml = "";
-        const iconSize = 40; // アイコンのサイズを固定（40px × 40px）
+        const iconSize = PIN_CONFIG.ICON_SIZE;
 
         if (pin.icon_type === "whale") {
-            // クジラアイコン（6000円以上）
+            // クジラアイコン（PIN_CONFIG.WHALE_THRESHOLD円以上）
             // 画像を使用してPCとスマホで統一されたデザインにする
             // Railsのアセットパイプライン経由で画像を参照
             const whaleIconPath = getImagePath("whale-icon.png");
             iconHtml = `<img src="${whaleIconPath}" alt="クジラ" class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; object-fit: contain; display: block; transition: none !important; max-width: none !important; user-select: none; -webkit-user-select: none; pointer-events: none;" draggable="false" onerror="this.style.display='none'; console.error('画像の読み込みに失敗しました:', this.src);">`;
         } else if (pin.icon_type === "tuna") {
-            // マグロアイコン（3000〜5999円）
+            // マグロアイコン（PIN_CONFIG.MIN_PRICE〜PIN_CONFIG.WHALE_THRESHOLD-1円）
             // 画像を使用してPCとスマホで統一されたデザインにする
             // Railsのアセットパイプライン経由で画像を参照
             const tunaIconPath = getImagePath("tuna-icon.png");
             iconHtml = `<img src="${tunaIconPath}" alt="マグロ" class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; object-fit: contain; display: block; transition: none !important; max-width: none !important; user-select: none; -webkit-user-select: none; pointer-events: none;" draggable="false" onerror="this.style.display='none'; console.error('画像の読み込みに失敗しました:', this.src);">`;
         } else {
-            // 通常のピン（3000円未満）
+            // 通常のピン（PIN_CONFIG.MIN_PRICE円未満）
             // transition-noneクラスとインラインスタイルでアニメーションを無効化
             iconHtml = `<div class="transition-none" style="width: ${iconSize}px; height: ${iconSize}px; background-color: #3B82F6; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: none !important;"></div>`;
         }
@@ -673,39 +705,18 @@ function addPinToMap(map, pin) {
         }, 0);
 
         // MapLibreの標準Marker機能を使用
-        // 経度（longitude）と緯度（latitude）を明示的に数値型に変換
-        // 注意: MapLibreは [経度(longitude), 緯度(latitude)] の順序を要求します
-        // 重要: 文字列の可能性があるため、確実に数値型に変換
-        const longitude = Number(pin.lng);  // 経度（-180 ～ 180）
-        const latitude = Number(pin.lat);   // 緯度（-90 ～ 90）
-
-        // 座標の型と値を確認
-        console.log(`座標の型確認: lng型=${typeof pin.lng}, lat型=${typeof pin.lat}`);
-        console.log(`座標の値: lng=${pin.lng}, lat=${pin.lat}`);
-        console.log(`変換後: longitude型=${typeof longitude}, latitude型=${typeof latitude}`);
-        console.log(`変換後の値: longitude=${longitude}, latitude=${latitude}`);
-
-        // 座標の妥当性をチェック
-        if (isNaN(longitude) || isNaN(latitude)) {
-            console.error("無効な座標です（NaN）:", { longitude, latitude, pin });
+        // 座標の妥当性を検証
+        const coordValidation = validateCoordinates(pin.lng, pin.lat);
+        if (!coordValidation.valid) {
+            console.error(coordValidation.error, { lng: pin.lng, lat: pin.lat, pin });
             return;
         }
 
-        // 座標の範囲をチェック（経度は-180～180、緯度は-90～90）
-        if (longitude < -180 || longitude > 180) {
-            console.error("経度が範囲外です:", longitude);
-            return;
-        }
-        if (latitude < -90 || latitude > 90) {
-            console.error("緯度が範囲外です:", latitude);
-            return;
-        }
+        const longitude = coordValidation.lng;
+        const latitude = coordValidation.lat;
 
         // 注意: marker.addTo(map) は地図がロード中であっても実行可能です（ロード完了後に自動的に表示されます）
         // そのため、ここでのloaded()チェックは不要です
-
-        // マーカーを作成（座標を直接指定）
-        console.log(`マーカーを作成中: 経度=${longitude} (型: ${typeof longitude}), 緯度=${latitude} (型: ${typeof latitude})`);
 
         // マーカーを作成
         // 【超重要】anchor: 'bottom'を必ず指定 - これにより画像の下端中央が座標に固定される
@@ -714,55 +725,15 @@ function addPinToMap(map, pin) {
             anchor: "bottom" // ピンの下端中央が座標位置に来るように設定（必須）
         });
 
-        console.log("マーカーのanchor設定: bottom（下端中央）");
-
         // 座標を設定（MapLibreは [経度, 緯度] の順序を要求）
         // 重要: [longitude, latitude] = [経度, 緯度] の順序、必ず数値型で渡す
         const coordinates = [longitude, latitude];
-        console.log("座標配列（数値型確認）:", coordinates, "型:", typeof coordinates[0], typeof coordinates[1]);
         marker.setLngLat(coordinates);
-        console.log("座標を設定しました: [経度, 緯度] =", coordinates);
 
         // 地図に追加（座標を設定してから追加）
         // 重要: addTo()は地図のコンテナにマーカーを追加し、地図の座標系にバインドする
         marker.addTo(map);
-        console.log("地図に追加しました");
 
-        // マーカーが正しく地図に追加されたか確認
-        const actualLngLat = marker.getLngLat();
-        console.log("マーカーの実際の座標:", actualLngLat);
-        console.log("設定した座標との一致:",
-            Math.abs(actualLngLat.lng - longitude) < 0.0001 &&
-            Math.abs(actualLngLat.lat - latitude) < 0.0001
-        );
-
-        // マーカー要素がDOMに追加されているか確認
-        setTimeout(() => {
-            const markerElement = el.parentElement;
-            if (markerElement) {
-                const computedStyle = window.getComputedStyle(markerElement);
-                const elStyle = window.getComputedStyle(el);
-                console.log("マーカー要素の親要素:", markerElement);
-                console.log("マーカー要素の親要素のスタイル:", {
-                    position: computedStyle.position,
-                    display: computedStyle.display,
-                    visibility: computedStyle.visibility,
-                    opacity: computedStyle.opacity,
-                    transform: computedStyle.transform,
-                    left: computedStyle.left,
-                    top: computedStyle.top
-                });
-                console.log("マーカー要素のスタイル:", {
-                    display: elStyle.display,
-                    visibility: elStyle.visibility,
-                    opacity: elStyle.opacity,
-                    width: elStyle.width,
-                    height: elStyle.height
-                });
-            } else {
-                console.warn("マーカー要素の親要素が見つかりません");
-            }
-        }, 100);
 
         // クリックイベントを追加
         el.addEventListener("click", (e) => {
@@ -776,7 +747,6 @@ function addPinToMap(map, pin) {
         // 現在のズームレベルに応じて表示/非表示を設定
         // 注意: マーカーが地図に追加された後、MapLibreが親要素を作成するため、
         // ここでは設定せず、updatePinVisibility関数で一括管理する
-        console.log(`✅ ピンを追加しました: ID=${pin.id}, 座標=[${longitude}, ${latitude}]`);
     } catch (error) {
         console.error("❌ ピンの追加に失敗しました:", pin, error);
         console.error("エラーの詳細:", error.stack);
@@ -1077,13 +1047,12 @@ function initModal() {
                 window.__map.flyTo({
                     center: [myArea.lng, myArea.lat],
                     zoom: myArea.zoom,
-                    duration: 1000
+                    duration: MAP_CONFIG.FLY_TO_DURATION
                 });
                 clearCityLinksHighlight();
                 const myAreaBtn = document.getElementById("my-area-btn");
                 if (myAreaBtn) {
-                    myAreaBtn.classList.add("bg-blue-700", "font-bold");
-                    myAreaBtn.classList.remove("bg-transparent");
+                    highlightButton(myAreaBtn);
                 }
             } else if (window.__map) {
                 openModal("my-area-modal");
@@ -1123,7 +1092,6 @@ function initModal() {
     if (mobileMyPinsToggle) {
         mobileMyPinsToggle.addEventListener("click", () => {
             showMyPinsOnly = !showMyPinsOnly;
-            console.log("トグル切り替え:", showMyPinsOnly ? "ON（自分のピンのみ）" : "OFF（全ピン）");
             updateToggleButton(mobileMyPinsToggle, showMyPinsOnly);
 
             // ピンを再読み込み
@@ -1287,7 +1255,6 @@ function initModal() {
     if (myPinsToggle) {
         myPinsToggle.addEventListener("click", () => {
             showMyPinsOnly = !showMyPinsOnly;
-            console.log("トグル切り替え:", showMyPinsOnly ? "ON（自分のピンのみ）" : "OFF（全ピン）");
             updateToggleButton(myPinsToggle, showMyPinsOnly);
 
             // ピンを再読み込み
@@ -1320,34 +1287,22 @@ function initModal() {
             }
 
             // 座標を確認（MapLibreのgetCenter()から取得した値）
-            console.log("選択された位置:", selectedLocation);
-            console.log("経度(longitude):", selectedLocation.lng, "型:", typeof selectedLocation.lng);
-            console.log("緯度(latitude):", selectedLocation.lat, "型:", typeof selectedLocation.lat);
-
-            // 座標を確実に数値型に変換
-            const lng = Number(selectedLocation.lng);  // 経度
-            const lat = Number(selectedLocation.lat);   // 緯度
-
-            console.log("変換後の座標: 経度=", lng, "型:", typeof lng, "緯度=", lat, "型:", typeof lat);
-
-            // 座標の妥当性をチェック
-            if (isNaN(lng) || isNaN(lat)) {
-                alert("座標が無効です。もう一度位置を選択してください。");
+            // 座標の妥当性を検証
+            const coordValidation = validateCoordinates(selectedLocation.lng, selectedLocation.lat);
+            if (!coordValidation.valid) {
+                alert(`${coordValidation.error}。もう一度位置を選択してください。`);
                 return;
             }
 
-            // 座標の範囲をチェック
-            if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-                alert("座標が範囲外です。もう一度位置を選択してください。");
-                return;
-            }
+            const lng = coordValidation.lng;
+            const lat = coordValidation.lat;
 
             // 金額を取得してバリデーション
             const price = parseInt(document.getElementById("reg-price").value);
 
-            // 金額のバリデーション（3000円以上9999円以下である必要がある）
-            if (isNaN(price) || price < 3000 || price > 9999) {
-                alert("金額は3000円以上9999円以下である必要があります。");
+            // 金額のバリデーション
+            if (isNaN(price) || price < PIN_CONFIG.MIN_PRICE || price > PIN_CONFIG.MAX_PRICE) {
+                alert(`金額は${PIN_CONFIG.MIN_PRICE}円以上${PIN_CONFIG.MAX_PRICE}円以下である必要があります。`);
                 document.getElementById("reg-price").focus();
                 return;
             }
@@ -1355,9 +1310,9 @@ function initModal() {
             // 配達距離を取得してバリデーション
             const distance = parseFloat(document.getElementById("reg-distance").value);
 
-            // 配達距離のバリデーション（0.1km以上99.9km以下、小数点1桁まで）
-            if (isNaN(distance) || distance < 0.1 || distance > 99.9) {
-                alert("配達距離は0.1km以上99.9km以下である必要があります（小数点1桁まで）。");
+            // 配達距離のバリデーション（小数点1桁まで）
+            if (isNaN(distance) || distance < PIN_CONFIG.MIN_DISTANCE || distance > PIN_CONFIG.MAX_DISTANCE) {
+                alert(`配達距離は${PIN_CONFIG.MIN_DISTANCE}km以上${PIN_CONFIG.MAX_DISTANCE}km以下である必要があります（小数点1桁まで）。`);
                 document.getElementById("reg-distance").focus();
                 return;
             }
@@ -1384,8 +1339,6 @@ function initModal() {
                 }
             };
 
-            console.log("送信する座標データ:", formData.pin);
-            console.log("送信する座標の型確認: lat型=", typeof formData.pin.lat, "lng型=", typeof formData.pin.lng);
 
             try {
                 const response = await fetch("/api/pins", {
@@ -1397,15 +1350,11 @@ function initModal() {
                 });
 
                 const result = await response.json();
-                console.log("ピン登録レスポンス:", result);
 
                 if (result.status === "success") {
-                    console.log("ピン登録成功:", result.data);
-
                     // 削除トークンをlocalStorageに保存
                     if (result.data && result.data.delete_token) {
                         localStorage.setItem(`pin_delete_token_${result.data.pin.id}`, result.data.delete_token);
-                        console.log("削除トークンを保存しました");
                     }
 
                     // モーダルを閉じる
@@ -1418,9 +1367,7 @@ function initModal() {
                     delete map._selectedLocation;
 
                     // ピンを再読み込み
-                    console.log("ピンを再読み込みします...");
                     await loadPins(map);
-                    console.log("ピンの再読み込みが完了しました");
 
                     alert("ピンを登録しました");
                 } else {
@@ -1607,9 +1554,6 @@ function enableRegistrationMode() {
             lng: lng,  // 経度（longitude）
             lat: lat   // 緯度（latitude）
         };
-        console.log("位置を更新しました:", map._selectedLocation);
-        console.log("座標の型確認: lng型=", typeof lng, "lat型=", typeof lat);
-        console.log("座標の値: 経度=", lng, "緯度=", lat);
     };
 
     map.on("move", updateLocation);
@@ -1743,8 +1687,6 @@ window.loadPins = loadPins;
 
 // 地図とモーダルの初期化
 function initializeApp() {
-    console.log("アプリを初期化します");
-
     // 既存の地図インスタンスがある場合のクリーンアップ処理（Turbo Drive対策）
     if (window.__map) {
         window.__map.remove();
@@ -1766,11 +1708,9 @@ function initializeApp() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOMContentLoadedイベントが発火しました");
     initializeApp();
 });
 
 document.addEventListener("turbo:load", () => {
-    console.log("turbo:loadイベントが発火しました");
     initializeApp();
 });
