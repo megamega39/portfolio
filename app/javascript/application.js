@@ -31,7 +31,35 @@ function initMap() {
     el.dataset.mapInitialized = "1";
 
     const cityKey = getCityFromUrl();
-    const { center, zoom } = CITY[cityKey];
+    const cityData = CITY[cityKey];
+
+    // マイエリアが登録されているかチェック（ログイン時はサーバーから、未ログイン時はlocalStorageから）
+    loadMyArea().then(myArea => {
+        if (myArea) {
+            // マイエリアが登録されている場合はそこに飛ぶ
+            createMapWithCenter([myArea.lng, myArea.lat], myArea.zoom);
+            // 都市リンクのハイライトをクリア
+            clearCityLinksHighlight();
+            // マイエリアボタンをハイライト
+            const myAreaBtn = document.getElementById("my-area-btn");
+            if (myAreaBtn) {
+                myAreaBtn.classList.add("bg-blue-700", "font-bold");
+                myAreaBtn.classList.remove("bg-transparent");
+            }
+        } else {
+            // マイエリアが未登録の場合は都市データを使用
+            createMapWithCenter(cityData.center, cityData.zoom);
+        }
+    }).catch(() => {
+        // マイエリア取得に失敗した場合は都市データを使用
+        createMapWithCenter(cityData.center, cityData.zoom);
+    });
+}
+
+// 地図を作成する関数（初期中心座標とズームレベルを指定）
+function createMapWithCenter(center, zoom) {
+    const el = document.getElementById("map");
+    if (!el) return;
 
     const map = new maplibregl.Map({
         container: "map",
@@ -154,6 +182,256 @@ function initMap() {
 
     // 都市リンクの初期化
     initCityLinks(map);
+
+    // マイエリアボタンの初期化
+    initMyAreaButton(map);
+}
+
+// マイエリア情報を取得（ログイン時はサーバーから、未ログイン時はlocalStorageから）
+async function loadMyArea() {
+    const currentUserId = getCurrentUserId();
+
+    // ログイン時はサーバーから取得
+    if (currentUserId) {
+        try {
+            const response = await fetch("/api/my_area", {
+                method: "GET",
+                headers: {
+                    "X-CSRF-Token": getCSRFToken(),
+                    "Content-Type": "application/json"
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const result = await response.json();
+            if (result.status === "success" && result.data) {
+                return result.data;
+            }
+            return null;
+        } catch (error) {
+            console.error("マイエリア取得エラー:", error);
+            return null;
+        }
+    } else {
+        // 未ログイン時はlocalStorageから取得
+        try {
+            const stored = localStorage.getItem("my_area");
+            if (stored) {
+                return JSON.parse(stored);
+            }
+            return null;
+        } catch (error) {
+            console.error("localStorageからマイエリア取得エラー:", error);
+            return null;
+        }
+    }
+}
+
+// マイエリアボタンの初期化
+function initMyAreaButton(map) {
+    const myAreaBtn = document.getElementById("my-area-btn");
+    if (!myAreaBtn) return;
+
+    // マイエリアボタンクリック時
+    myAreaBtn.addEventListener("click", async () => {
+        const myArea = await loadMyArea();
+        if (myArea) {
+            // マイエリアが登録されている場合はそこに飛ぶ
+            map.flyTo({
+                center: [myArea.lng, myArea.lat],
+                zoom: myArea.zoom,
+                duration: 1000
+            });
+
+            // 都市リンクのハイライトをクリア
+            clearCityLinksHighlight();
+
+            // マイエリアボタンをハイライト
+            myAreaBtn.classList.add("bg-blue-700", "font-bold");
+            myAreaBtn.classList.remove("bg-transparent");
+        } else {
+            // マイエリアが未登録の場合は設定モーダルを開く
+            openModal("my-area-modal");
+        }
+    });
+
+    // マイエリア設定モーダルのイベントリスナー
+    initMyAreaModal(map);
+}
+
+// 都市リンクのハイライトをクリア
+function clearCityLinksHighlight() {
+    const cityLinks = document.querySelectorAll(".city-link");
+    cityLinks.forEach(link => {
+        link.classList.remove("bg-blue-700", "font-bold");
+        link.classList.add("bg-transparent");
+    });
+}
+
+// マイエリアボタンのハイライトをクリア
+function clearMyAreaButtonHighlight() {
+    const myAreaBtn = document.getElementById("my-area-btn");
+    if (myAreaBtn) {
+        myAreaBtn.classList.remove("bg-blue-700", "font-bold");
+        myAreaBtn.classList.add("bg-transparent");
+    }
+}
+
+// マイエリア設定モーダルの初期化
+function initMyAreaModal(map) {
+    const setCurrentLocationBtn = document.getElementById("set-current-location-btn");
+    const setMapCenterBtn = document.getElementById("set-map-center-btn");
+    const saveMyAreaBtn = document.getElementById("save-my-area-btn");
+
+    let selectedLocation = null;
+
+    // 現在地を設定
+    if (setCurrentLocationBtn) {
+        setCurrentLocationBtn.addEventListener("click", () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const zoom = map.getZoom();
+                        selectedLocation = { lat, lng, zoom };
+                        updateMyAreaInfo(lat, lng, zoom);
+
+                        // 地図を現在地に移動
+                        map.flyTo({
+                            center: [lng, lat],
+                            zoom: zoom,
+                            duration: 1000
+                        });
+                    },
+                    (error) => {
+                        alert("現在地の取得に失敗しました: " + error.message);
+                    }
+                );
+            } else {
+                alert("このブラウザは位置情報をサポートしていません");
+            }
+        });
+    }
+
+    // 地図中心を設定
+    if (setMapCenterBtn) {
+        setMapCenterBtn.addEventListener("click", () => {
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            selectedLocation = {
+                lat: center.lat,
+                lng: center.lng,
+                zoom: zoom
+            };
+            updateMyAreaInfo(center.lat, center.lng, zoom);
+        });
+    }
+
+    // 保存ボタン
+    if (saveMyAreaBtn) {
+        saveMyAreaBtn.addEventListener("click", async () => {
+            if (!selectedLocation) {
+                alert("位置を設定してください");
+                return;
+            }
+
+            const currentUserId = getCurrentUserId();
+            const myAreaData = {
+                lat: selectedLocation.lat,
+                lng: selectedLocation.lng,
+                zoom: selectedLocation.zoom
+            };
+
+            // ログイン時はサーバーに保存、未ログイン時はlocalStorageに保存
+            if (currentUserId) {
+                // ログイン時：サーバーに保存
+                try {
+                    const response = await fetch("/api/my_area", {
+                        method: "POST",
+                        headers: {
+                            "X-CSRF-Token": getCSRFToken(),
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            my_area: myAreaData
+                        })
+                    });
+
+                    // レスポンスのContent-Typeを確認
+                    const contentType = response.headers.get("content-type");
+                    console.log("マイエリア保存レスポンス - ステータス:", response.status, "Content-Type:", contentType);
+
+                    let result;
+                    if (contentType && contentType.includes("application/json")) {
+                        result = await response.json();
+                    } else {
+                        // JSONでない場合はテキストとして取得
+                        const text = await response.text();
+                        console.error("JSON以外のレスポンス:", text);
+                        throw new Error("サーバーからのレスポンスがJSON形式ではありません");
+                    }
+
+                    console.log("マイエリア保存レスポンス:", result);
+
+                    if (response.ok && result.status === "success") {
+                        closeModal("my-area-modal");
+                        alert("マイエリアを保存しました");
+                    } else {
+                        const errorDiv = document.getElementById("my-area-error");
+                        if (errorDiv) {
+                            const errorMessage = result.errors ? result.errors.join(", ") : (result.error || "保存に失敗しました");
+                            errorDiv.textContent = errorMessage;
+                            errorDiv.classList.remove("hidden");
+                            console.error("マイエリア保存エラー:", result);
+                        }
+                    }
+                } catch (error) {
+                    console.error("マイエリア保存エラー:", error);
+                    const errorDiv = document.getElementById("my-area-error");
+                    if (errorDiv) {
+                        errorDiv.textContent = "マイエリアの保存に失敗しました: " + error.message;
+                        errorDiv.classList.remove("hidden");
+                    }
+                }
+            } else {
+                // 未ログイン時：localStorageに保存
+                try {
+                    localStorage.setItem("my_area", JSON.stringify(myAreaData));
+                    closeModal("my-area-modal");
+                    alert("マイエリアを保存しました");
+                } catch (error) {
+                    console.error("localStorageへの保存エラー:", error);
+                    const errorDiv = document.getElementById("my-area-error");
+                    if (errorDiv) {
+                        errorDiv.textContent = "マイエリアの保存に失敗しました: " + error.message;
+                        errorDiv.classList.remove("hidden");
+                    }
+                }
+            }
+        });
+    }
+}
+
+// マイエリア情報表示を更新
+function updateMyAreaInfo(lat, lng, zoom) {
+    const infoDiv = document.getElementById("my-area-info");
+    const latDisplay = document.getElementById("my-area-lat-display");
+    const lngDisplay = document.getElementById("my-area-lng-display");
+    const zoomDisplay = document.getElementById("my-area-zoom-display");
+
+    if (infoDiv && latDisplay && lngDisplay && zoomDisplay) {
+        latDisplay.textContent = lat.toFixed(6);
+        lngDisplay.textContent = lng.toFixed(6);
+        zoomDisplay.textContent = zoom.toFixed(1);
+        infoDiv.classList.remove("hidden");
+    }
 }
 
 // 都市リンクの初期化
@@ -182,6 +460,9 @@ function initCityLinks(map) {
                 });
                 link.classList.add("bg-blue-700", "font-bold");
                 link.classList.remove("bg-transparent");
+
+                // マイエリアボタンのハイライトをクリア
+                clearMyAreaButtonHighlight();
             }
         });
     });
@@ -567,6 +848,12 @@ function getCurrentUserId() {
     return null;
 }
 
+// CSRFトークンを取得する関数
+function getCSRFToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '';
+}
+
 // トグルボタンの見た目を更新
 function updateToggleButton(toggleBtn, isOn) {
     const span = toggleBtn.querySelector("span");
@@ -596,6 +883,7 @@ function initModal() {
     }
 
     // ヘッダーのボタンにイベントリスナーを追加
+    const myAreaSettingsBtn = document.getElementById("my-area-settings-btn");
     const aboutAppBtn = document.getElementById("about-app-btn");
     const howToUseBtn = document.getElementById("how-to-use-btn");
     const termsBtn = document.getElementById("terms-btn");
@@ -604,6 +892,13 @@ function initModal() {
     const loginBtn = document.getElementById("login-btn");
     const logoutBtn = document.getElementById("logout-btn");
     const myPinsToggle = document.getElementById("my-pins-toggle");
+
+    if (myAreaSettingsBtn) {
+        myAreaSettingsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openModal("my-area-modal");
+        });
+    }
 
     if (aboutAppBtn) {
         aboutAppBtn.addEventListener("click", (e) => {
@@ -678,11 +973,6 @@ function initModal() {
         });
     }
 
-    // CSRFトークンを取得する関数
-    function getCSRFToken() {
-        const token = document.querySelector('meta[name="csrf-token"]');
-        return token ? token.getAttribute('content') : '';
-    }
 
     // ログインフォームの送信処理
     const loginForm = document.getElementById("login-form");
@@ -953,7 +1243,7 @@ function initModal() {
     }
 
     // すべてのモーダルに背景クリックで閉じる機能を追加
-    const modals = ["about-app-modal", "how-to-use-modal", "terms-modal", "pin-registration-modal", "pin-modal", "login-modal", "signup-modal"];
+    const modals = ["about-app-modal", "how-to-use-modal", "terms-modal", "pin-registration-modal", "pin-modal", "login-modal", "signup-modal", "my-area-modal"];
     modals.forEach((modalId) => {
         const modal = document.getElementById(modalId);
         if (modal) {

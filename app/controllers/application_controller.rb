@@ -7,4 +7,14 @@ class ApplicationController < ActionController::Base
   
   # 現在のユーザー情報を取得するヘルパーメソッド
   helper_method :current_user
+  
+  # JSONリクエスト時の認証失敗をハンドリング
+  before_action :configure_permitted_parameters, if: :devise_controller?
+  
+  protected
+  
+  def configure_permitted_parameters
+    devise_parameter_sanitizer.permit(:sign_up, keys: [:user_name])
+  end
+  
 end

@@ -19,6 +19,8 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     resources :pins, only: [:index, :create, :destroy]
+    get "my_area", to: "my_area#show"
+    post "my_area", to: "my_area#update"
   end
 
   # Defines the root path route ("/")
