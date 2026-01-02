@@ -262,29 +262,14 @@ async function loadMyArea() {
 
     // ログイン時はサーバーから取得
     if (currentUserId) {
-        try {
-            const response = await fetch("/api/my_area", {
-                method: "GET",
-                headers: {
-                    "X-CSRF-Token": getCSRFToken(),
-                    "Content-Type": "application/json"
-                },
-                credentials: 'same-origin'
-            });
+        const result = await apiRequest("/api/my_area", {
+            method: "GET"
+        });
 
-            if (!response.ok) {
-                return null;
-            }
-
-            const result = await response.json();
-            if (result.status === "success" && result.data) {
-                return result.data;
-            }
-            return null;
-        } catch (error) {
-            console.error("マイエリア取得エラー:", error);
-            return null;
+        if (result.success && result.data) {
+            return result.data;
         }
+        return null;
     } else {
         // 未ログイン時はlocalStorageから取得
         try {
@@ -375,11 +360,11 @@ function initMyAreaModal(map) {
                         });
                     },
                     (error) => {
-                        alert("現在地の取得に失敗しました: " + error.message);
+                        showToast("現在地の取得に失敗しました: " + error.message, "error");
                     }
                 );
             } else {
-                alert("このブラウザは位置情報をサポートしていません");
+                showToast("このブラウザは位置情報をサポートしていません", "error");
             }
         });
     }
@@ -402,7 +387,7 @@ function initMyAreaModal(map) {
     if (saveMyAreaBtn) {
         saveMyAreaBtn.addEventListener("click", async () => {
             if (!selectedLocation) {
-                alert("位置を設定してください");
+                showToast("位置を設定してください", "error");
                 return;
             }
 
@@ -416,50 +401,18 @@ function initMyAreaModal(map) {
             // ログイン時はサーバーに保存、未ログイン時はlocalStorageに保存
             if (currentUserId) {
                 // ログイン時：サーバーに保存
-                try {
-                    const response = await fetch("/api/my_area", {
-                        method: "POST",
-                        headers: {
-                            "X-CSRF-Token": getCSRFToken(),
-                            "Content-Type": "application/json",
-                            "Accept": "application/json"
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                            my_area: myAreaData
-                        })
-                    });
+                const result = await apiRequest("/api/my_area", {
+                    method: "POST",
+                    body: { my_area: myAreaData }
+                });
 
-                    // レスポンスのContent-Typeを確認
-                    const contentType = response.headers.get("content-type");
-
-                    let result;
-                    if (contentType && contentType.includes("application/json")) {
-                        result = await response.json();
-                    } else {
-                        // JSONでない場合はテキストとして取得
-                        const text = await response.text();
-                        console.error("JSON以外のレスポンス:", text);
-                        throw new Error("サーバーからのレスポンスがJSON形式ではありません");
-                    }
-
-                    if (response.ok && result.status === "success") {
-                        closeModal("my-area-modal");
-                        alert("マイエリアを保存しました");
-                    } else {
-                        const errorDiv = document.getElementById("my-area-error");
-                        if (errorDiv) {
-                            const errorMessage = result.errors ? result.errors.join(", ") : (result.error || "保存に失敗しました");
-                            errorDiv.textContent = errorMessage;
-                            errorDiv.classList.remove("hidden");
-                            console.error("マイエリア保存エラー:", result);
-                        }
-                    }
-                } catch (error) {
-                    console.error("マイエリア保存エラー:", error);
+                if (result.success) {
+                    closeModal("my-area-modal");
+                    showToast("マイエリアを保存しました", "success");
+                } else {
                     const errorDiv = document.getElementById("my-area-error");
                     if (errorDiv) {
-                        errorDiv.textContent = "マイエリアの保存に失敗しました: " + error.message;
+                        errorDiv.textContent = result.error || "保存に失敗しました";
                         errorDiv.classList.remove("hidden");
                     }
                 }
@@ -468,7 +421,7 @@ function initMyAreaModal(map) {
                 try {
                     localStorage.setItem("my_area", JSON.stringify(myAreaData));
                     closeModal("my-area-modal");
-                    alert("マイエリアを保存しました");
+                    showToast("マイエリアを保存しました", "success");
                 } catch (error) {
                     console.error("localStorageへの保存エラー:", error);
                     const errorDiv = document.getElementById("my-area-error");
@@ -553,21 +506,23 @@ async function loadPins(map) {
     // ここでのloaded()チェックは不要（MapLibreの仕様上、loadイベント発火直後でもloaded()がfalseを返すことがある）
 
     try {
-        const response = await fetch("/api/pins");
+        const result = await apiRequest("/api/pins", {
+            method: "GET",
+            requireCSRF: false // ピン一覧取得はCSRF不要
+        });
 
-        if (!response.ok) {
-            console.error("APIリクエストが失敗しました:", response.status, response.statusText);
+        if (!result.success) {
+            console.error("APIリクエストが失敗しました:", result.error);
             return;
         }
 
-        const result = await response.json();
-
         // データを正規化（配列そのものが来るか、dataプロパティに来るか両対応）
         let pinsData = [];
-        if (Array.isArray(result)) {
-            pinsData = result; // Rails標準の配列形式
-        } else if (result.data && Array.isArray(result.data)) {
-            pinsData = result.data; // ラッパー形式
+        if (Array.isArray(result.data)) {
+            pinsData = result.data;
+        } else if (result.response && Array.isArray(result.response)) {
+            // フォールバック: レスポンスが直接配列の場合
+            pinsData = result.response;
         }
 
         // 自分のピンのみ表示モードの場合、フィルタリング
@@ -613,7 +568,7 @@ async function loadPins(map) {
                 window.__updatePinVisibility();
             }
         } else {
-            console.warn("表示できるピンがありません", result);
+            console.warn("表示できるピンがありません");
         }
     } catch (error) {
         console.error("ピンの読み込みに失敗しました:", error);
@@ -801,6 +756,15 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove("hidden");
+
+        // ピン登録モーダルの場合、エラー表示をクリア
+        if (modalId === "pin-registration-modal") {
+            const errorDiv = document.getElementById("pin-registration-error");
+            if (errorDiv) {
+                errorDiv.classList.add("hidden");
+                errorDiv.textContent = "";
+            }
+        }
     }
     // モバイルメニューを閉じる
     const mobileMenu = document.getElementById("mobile-menu");
@@ -831,6 +795,169 @@ function getCurrentUserId() {
 function getCSRFToken() {
     const token = document.querySelector('meta[name="csrf-token"]');
     return token ? token.getAttribute('content') : '';
+}
+
+/**
+ * APIリクエストを送信する共通関数
+ * @param {string} url - リクエストURL
+ * @param {Object} options - リクエストオプション
+ * @param {string} options.method - HTTPメソッド（デフォルト: "GET"）
+ * @param {Object} options.headers - 追加ヘッダー
+ * @param {Object} options.body - リクエストボディ（JSON.stringifyされる）
+ * @param {boolean} options.requireCSRF - CSRFトークンが必要か（デフォルト: true）
+ * @returns {Promise<{success: boolean, data?: any, error?: string, response?: Response}>}
+ */
+async function apiRequest(url, options = {}) {
+    const {
+        method = "GET",
+        headers = {},
+        body = null,
+        requireCSRF = true
+    } = options;
+
+    // デフォルトヘッダー
+    const defaultHeaders = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+
+    // CSRFトークンを追加（必要な場合）
+    if (requireCSRF) {
+        defaultHeaders["X-CSRF-Token"] = getCSRFToken();
+    }
+
+    // ヘッダーをマージ
+    const requestHeaders = { ...defaultHeaders, ...headers };
+
+    // リクエスト設定
+    const config = {
+        method: method,
+        headers: requestHeaders,
+        credentials: 'same-origin'
+    };
+
+    // ボディがある場合はJSON文字列化
+    if (body) {
+        config.body = JSON.stringify(body);
+    }
+
+    try {
+        const response = await fetch(url, config);
+
+        // レスポンスのContent-Typeを確認
+        const contentType = response.headers.get("content-type");
+        let result = null;
+
+        if (contentType && contentType.includes("application/json")) {
+            result = await response.json();
+        } else if (response.ok && response.status === 204) {
+            // No Content レスポンス
+            return { success: true, data: null, response };
+        } else {
+            // JSONでない場合はテキストとして取得
+            const text = await response.text();
+            console.error("JSON以外のレスポンス:", text);
+            throw new Error("サーバーからのレスポンスがJSON形式ではありません");
+        }
+
+        // レスポンスが成功したかチェック
+        if (response.ok) {
+            // 成功レスポンスの形式を統一
+            const data = result.data !== undefined ? result.data : result;
+            return { success: true, data, response };
+        } else {
+            // エラーレスポンス
+            const errorMessage = result.errors
+                ? result.errors.join(", ")
+                : (result.error || `リクエストに失敗しました (${response.status})`);
+            return { success: false, error: errorMessage, response };
+        }
+    } catch (error) {
+        console.error("APIリクエストエラー:", error);
+        return {
+            success: false,
+            error: error.message || "ネットワークエラーが発生しました"
+        };
+    }
+}
+
+/**
+ * ログアウト処理を実行する
+ * Turbo Drive対応のため、フォーム送信方式を使用
+ */
+function handleLogout() {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/users/sign_out";
+
+    // CSRFトークンを追加
+    const csrfInput = document.createElement("input");
+    csrfInput.type = "hidden";
+    csrfInput.name = "authenticity_token";
+    csrfInput.value = getCSRFToken();
+    form.appendChild(csrfInput);
+
+    // method override for DELETE
+    const methodInput = document.createElement("input");
+    methodInput.type = "hidden";
+    methodInput.name = "_method";
+    methodInput.value = "delete";
+    form.appendChild(methodInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+/**
+ * トースト通知を表示する
+ * @param {string} message - 表示するメッセージ
+ * @param {string} type - 通知の種類 ('success' | 'error' | 'info') デフォルト: 'success'
+ * @param {number} duration - 表示時間（ミリ秒）デフォルト: 3000
+ */
+function showToast(message, type = 'success', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    // トースト要素を作成
+    const toast = document.createElement('div');
+    toast.className = `pointer-events-auto transform transition-all duration-300 ease-in-out translate-x-full opacity-0`;
+
+    // タイプに応じたスタイルを設定
+    const typeStyles = {
+        success: 'bg-green-500 text-white',
+        error: 'bg-red-500 text-white',
+        info: 'bg-blue-500 text-white'
+    };
+
+    toast.className += ` ${typeStyles[type] || typeStyles.success} px-6 py-3 rounded-lg shadow-lg min-w-[300px] max-w-md`;
+
+    // メッセージを設定
+    toast.textContent = message;
+
+    // コンテナに追加
+    container.appendChild(toast);
+
+    // アニメーション: スライドイン
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            toast.classList.add('translate-x-0', 'opacity-100');
+        });
+    });
+
+    // 指定時間後に自動削除
+    setTimeout(() => {
+        // アニメーション: スライドアウト
+        toast.classList.remove('translate-x-0', 'opacity-100');
+        toast.classList.add('translate-x-full', 'opacity-0');
+
+        // アニメーション完了後に要素を削除
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, duration);
 }
 
 // 画像パスを取得する関数（Railsのアセットパイプライン対応）
@@ -1061,31 +1188,10 @@ function initModal() {
     }
 
     if (mobileLogoutBtn) {
-        mobileLogoutBtn.addEventListener("click", async (e) => {
+        mobileLogoutBtn.addEventListener("click", (e) => {
             e.preventDefault();
             if (mobileMenu) mobileMenu.classList.add("hidden");
-
-            // フォームを作成して送信（Turbo Drive対応）
-            const form = document.createElement("form");
-            form.method = "POST";
-            form.action = "/users/sign_out";
-
-            // CSRFトークンを追加
-            const csrfInput = document.createElement("input");
-            csrfInput.type = "hidden";
-            csrfInput.name = "authenticity_token";
-            csrfInput.value = getCSRFToken();
-            form.appendChild(csrfInput);
-
-            // method override for DELETE
-            const methodInput = document.createElement("input");
-            methodInput.type = "hidden";
-            methodInput.name = "_method";
-            methodInput.value = "delete";
-            form.appendChild(methodInput);
-
-            document.body.appendChild(form);
-            form.submit();
+            handleLogout();
         });
     }
 
@@ -1106,30 +1212,9 @@ function initModal() {
 
     // ログアウトボタンのイベントリスナー
     if (logoutBtn) {
-        logoutBtn.addEventListener("click", async (e) => {
+        logoutBtn.addEventListener("click", (e) => {
             e.preventDefault();
-
-            // フォームを作成して送信（Turbo Drive対応）
-            const form = document.createElement("form");
-            form.method = "POST";
-            form.action = "/users/sign_out";
-
-            // CSRFトークンを追加
-            const csrfInput = document.createElement("input");
-            csrfInput.type = "hidden";
-            csrfInput.name = "authenticity_token";
-            csrfInput.value = getCSRFToken();
-            form.appendChild(csrfInput);
-
-            // method override for DELETE
-            const methodInput = document.createElement("input");
-            methodInput.type = "hidden";
-            methodInput.name = "_method";
-            methodInput.value = "delete";
-            form.appendChild(methodInput);
-
-            document.body.appendChild(form);
-            form.submit();
+            handleLogout();
         });
     }
 
@@ -1144,35 +1229,21 @@ function initModal() {
             const password = document.getElementById("login-password").value;
             const errorDiv = document.getElementById("login-error");
 
-            try {
-                const response = await fetch("/users/sign_in", {
-                    method: "POST",
-                    headers: {
-                        "X-CSRF-Token": getCSRFToken(),
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        user: {
-                            email: email,
-                            password: password
-                        }
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    closeModal("login-modal");
-                    window.location.reload();
-                } else {
-                    errorDiv.textContent = result.errors ? result.errors.join(", ") : "ログインに失敗しました";
-                    errorDiv.classList.remove("hidden");
+            const result = await apiRequest("/users/sign_in", {
+                method: "POST",
+                body: {
+                    user: {
+                        email: email,
+                        password: password
+                    }
                 }
-            } catch (error) {
-                console.error("ログインエラー:", error);
-                errorDiv.textContent = "ログインに失敗しました";
+            });
+
+            if (result.success) {
+                closeModal("login-modal");
+                window.location.reload();
+            } else {
+                errorDiv.textContent = result.error || "ログインに失敗しました";
                 errorDiv.classList.remove("hidden");
             }
         });
@@ -1196,37 +1267,23 @@ function initModal() {
                 return;
             }
 
-            try {
-                const response = await fetch("/users", {
-                    method: "POST",
-                    headers: {
-                        "X-CSRF-Token": getCSRFToken(),
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        user: {
-                            user_name: userName,
-                            email: email,
-                            password: password,
-                            password_confirmation: passwordConfirmation
-                        }
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    closeModal("signup-modal");
-                    window.location.reload();
-                } else {
-                    errorDiv.textContent = result.errors ? result.errors.join(", ") : "登録に失敗しました";
-                    errorDiv.classList.remove("hidden");
+            const result = await apiRequest("/users", {
+                method: "POST",
+                body: {
+                    user: {
+                        user_name: userName,
+                        email: email,
+                        password: password,
+                        password_confirmation: passwordConfirmation
+                    }
                 }
-            } catch (error) {
-                console.error("登録エラー:", error);
-                errorDiv.textContent = "登録に失敗しました";
+            });
+
+            if (result.success) {
+                closeModal("signup-modal");
+                window.location.reload();
+            } else {
+                errorDiv.textContent = result.error || "登録に失敗しました";
                 errorDiv.classList.remove("hidden");
             }
         });
@@ -1273,16 +1330,26 @@ function initModal() {
         pinRegistrationForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
+            // エラー表示をクリア
+            const errorDiv = document.getElementById("pin-registration-error");
+            if (errorDiv) {
+                errorDiv.classList.add("hidden");
+                errorDiv.textContent = "";
+            }
+
             const map = window.__map;
             if (!map) {
-                alert("地図が読み込まれていません");
+                showToast("地図が読み込まれていません", "error");
                 return;
             }
 
             // 選択された位置を取得
             const selectedLocation = map._selectedLocation;
             if (!selectedLocation) {
-                alert("位置が選択されていません。モーダルを閉じて、もう一度地図上をクリックしてください。");
+                if (errorDiv) {
+                    errorDiv.textContent = "位置が選択されていません。モーダルを閉じて、もう一度地図上をクリックしてください。";
+                    errorDiv.classList.remove("hidden");
+                }
                 return;
             }
 
@@ -1290,7 +1357,10 @@ function initModal() {
             // 座標の妥当性を検証
             const coordValidation = validateCoordinates(selectedLocation.lng, selectedLocation.lat);
             if (!coordValidation.valid) {
-                alert(`${coordValidation.error}。もう一度位置を選択してください。`);
+                if (errorDiv) {
+                    errorDiv.textContent = `${coordValidation.error}。もう一度位置を選択してください。`;
+                    errorDiv.classList.remove("hidden");
+                }
                 return;
             }
 
@@ -1302,7 +1372,10 @@ function initModal() {
 
             // 金額のバリデーション
             if (isNaN(price) || price < PIN_CONFIG.MIN_PRICE || price > PIN_CONFIG.MAX_PRICE) {
-                alert(`金額は${PIN_CONFIG.MIN_PRICE}円以上${PIN_CONFIG.MAX_PRICE}円以下である必要があります。`);
+                if (errorDiv) {
+                    errorDiv.textContent = `金額は${PIN_CONFIG.MIN_PRICE}円以上${PIN_CONFIG.MAX_PRICE}円以下である必要があります。`;
+                    errorDiv.classList.remove("hidden");
+                }
                 document.getElementById("reg-price").focus();
                 return;
             }
@@ -1312,7 +1385,10 @@ function initModal() {
 
             // 配達距離のバリデーション（小数点1桁まで）
             if (isNaN(distance) || distance < PIN_CONFIG.MIN_DISTANCE || distance > PIN_CONFIG.MAX_DISTANCE) {
-                alert(`配達距離は${PIN_CONFIG.MIN_DISTANCE}km以上${PIN_CONFIG.MAX_DISTANCE}km以下である必要があります（小数点1桁まで）。`);
+                if (errorDiv) {
+                    errorDiv.textContent = `配達距離は${PIN_CONFIG.MIN_DISTANCE}km以上${PIN_CONFIG.MAX_DISTANCE}km以下である必要があります（小数点1桁まで）。`;
+                    errorDiv.classList.remove("hidden");
+                }
                 document.getElementById("reg-distance").focus();
                 return;
             }
@@ -1322,7 +1398,10 @@ function initModal() {
             if (distanceStr.includes(".")) {
                 const decimalPart = distanceStr.split(".")[1];
                 if (decimalPart && decimalPart.length > 1) {
-                    alert("配達距離は小数点1桁までしか入力できません。");
+                    if (errorDiv) {
+                        errorDiv.textContent = "配達距離は小数点1桁までしか入力できません。";
+                        errorDiv.classList.remove("hidden");
+                    }
                     document.getElementById("reg-distance").focus();
                     return;
                 }
@@ -1340,43 +1419,33 @@ function initModal() {
             };
 
 
-            try {
-                const response = await fetch("/api/pins", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(formData)
-                });
+            const result = await apiRequest("/api/pins", {
+                method: "POST",
+                body: formData,
+                requireCSRF: false // ピン登録はCSRF不要（API側でskip_before_action）
+            });
 
-                const result = await response.json();
-
-                if (result.status === "success") {
-                    // 削除トークンをlocalStorageに保存
-                    if (result.data && result.data.delete_token) {
-                        localStorage.setItem(`pin_delete_token_${result.data.pin.id}`, result.data.delete_token);
-                    }
-
-                    // モーダルを閉じる
-                    closeModal("pin-registration-modal");
-
-                    // フォームをリセット
-                    pinRegistrationForm.reset();
-
-                    // 選択位置をクリア
-                    delete map._selectedLocation;
-
-                    // ピンを再読み込み
-                    await loadPins(map);
-
-                    alert("ピンを登録しました");
-                } else {
-                    console.error("ピン登録エラー:", result);
-                    alert(`エラー: ${result.errors ? result.errors.join(", ") : result.error}`);
+            if (result.success && result.data) {
+                // 削除トークンをlocalStorageに保存
+                if (result.data.delete_token && result.data.pin) {
+                    localStorage.setItem(`pin_delete_token_${result.data.pin.id}`, result.data.delete_token);
                 }
-            } catch (error) {
-                console.error("ピン登録に失敗しました:", error);
-                alert("ピンの登録に失敗しました");
+
+                // モーダルを閉じる
+                closeModal("pin-registration-modal");
+
+                // フォームをリセット
+                pinRegistrationForm.reset();
+
+                // 選択位置をクリア
+                delete map._selectedLocation;
+
+                // ピンを再読み込み
+                await loadPins(map);
+
+                showToast("ピンを登録しました", "success");
+            } else {
+                showToast(`エラー: ${result.error || "ピンの登録に失敗しました"}`, "error");
             }
         });
     }
@@ -1405,7 +1474,7 @@ function initModal() {
             const pinUserId = modal.dataset.pinUserId;
 
             if (!pinId) {
-                alert("ピンIDが見つかりません");
+                showToast("ピンIDが見つかりません", "error");
                 return;
             }
 
@@ -1415,48 +1484,33 @@ function initModal() {
             // 削除権限のチェック（フロントエンド側の簡易チェック）
             // サーバー側で最終的な権限チェックを行う
             if (!deleteToken && !isLoggedIn) {
-                alert("削除権限がありません。");
+                showToast("削除権限がありません。", "error");
                 return;
             }
 
-            if (!confirm("このピンを削除しますか？")) {
-                return;
+            // リクエストボディを準備
+            const requestBody = {};
+            if (deleteToken) {
+                requestBody.delete_token = deleteToken;
             }
 
-            try {
-                // リクエストボディを準備
-                const requestBody = {};
-                if (deleteToken) {
-                    requestBody.delete_token = deleteToken;
+            const result = await apiRequest(`/api/pins/${pinId}`, {
+                method: "DELETE",
+                body: requestBody,
+                requireCSRF: false // ピン削除はCSRF不要（API側でskip_before_action）
+            });
+
+            if (result.success) {
+                // ピンを再読み込み
+                const map = window.__map;
+                if (map) {
+                    await loadPins(map);
                 }
 
-                const response = await fetch(`/api/pins/${pinId}`, {
-                    method: "DELETE",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-Token": getCSRFToken()
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(requestBody)
-                });
-
-                const result = await response.json();
-
-                if (result.status === "success") {
-                    // ピンを再読み込み
-                    const map = window.__map;
-                    if (map) {
-                        await loadPins(map);
-                    }
-
-                    closeModal("pin-modal");
-                    alert("ピンを削除しました");
-                } else {
-                    alert(`エラー: ${result.error || "削除に失敗しました"}`);
-                }
-            } catch (error) {
-                console.error("ピン削除に失敗しました:", error);
-                alert("ピンの削除に失敗しました");
+                closeModal("pin-modal");
+                showToast("ピンを削除しました", "success");
+            } else {
+                showToast(`エラー: ${result.error || "削除に失敗しました"}`, "error");
             }
         });
     }
