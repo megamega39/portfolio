@@ -828,6 +828,11 @@ function openModal(modalId) {
     if (modal) {
         modal.classList.remove("hidden");
     }
+    // モバイルメニューを閉じる
+    const mobileMenu = document.getElementById("mobile-menu");
+    if (mobileMenu) {
+        mobileMenu.classList.add("hidden");
+    }
 }
 
 // モーダルを閉じる関数
@@ -882,6 +887,54 @@ function initModal() {
         });
     }
 
+    // モバイルメニューの開閉
+    const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+    const mobileMenu = document.getElementById("mobile-menu");
+    const mobileMenuClose = document.getElementById("mobile-menu-close");
+
+    if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener("click", () => {
+            mobileMenu.classList.remove("hidden");
+        });
+    }
+
+    if (mobileMenuClose && mobileMenu) {
+        mobileMenuClose.addEventListener("click", () => {
+            mobileMenu.classList.add("hidden");
+        });
+    }
+
+    // モバイルメニューの背景クリックで閉じる
+    if (mobileMenu) {
+        mobileMenu.addEventListener("click", (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenu.classList.add("hidden");
+            }
+        });
+    }
+
+    // 都市ナビゲーションの折りたたみ（スマホ）
+    const cityNavToggle = document.getElementById("city-nav-toggle");
+    const cityNavContent = document.getElementById("city-nav-content");
+    const cityNavArrow = document.getElementById("city-nav-arrow");
+
+    if (cityNavToggle && cityNavContent) {
+        cityNavToggle.addEventListener("click", () => {
+            const isHidden = cityNavContent.classList.contains("hidden");
+            if (isHidden) {
+                cityNavContent.classList.remove("hidden");
+                if (cityNavArrow) {
+                    cityNavArrow.style.transform = "rotate(180deg)";
+                }
+            } else {
+                cityNavContent.classList.add("hidden");
+                if (cityNavArrow) {
+                    cityNavArrow.style.transform = "rotate(0deg)";
+                }
+            }
+        });
+    }
+
     // ヘッダーのボタンにイベントリスナーを追加
     const myAreaSettingsBtn = document.getElementById("my-area-settings-btn");
     const aboutAppBtn = document.getElementById("about-app-btn");
@@ -892,6 +945,16 @@ function initModal() {
     const loginBtn = document.getElementById("login-btn");
     const logoutBtn = document.getElementById("logout-btn");
     const myPinsToggle = document.getElementById("my-pins-toggle");
+
+    // モバイルメニューのボタン
+    const mobileMyAreaSettingsBtn = document.getElementById("mobile-my-area-settings-btn");
+    const mobileAboutAppBtn = document.getElementById("mobile-about-app-btn");
+    const mobileHowToUseBtn = document.getElementById("mobile-how-to-use-btn");
+    const mobileTermsBtn = document.getElementById("mobile-terms-btn");
+    const mobileLoginBtn = document.getElementById("mobile-login-btn");
+    const mobileLogoutBtn = document.getElementById("mobile-logout-btn");
+    const mobileMyPinsToggle = document.getElementById("mobile-my-pins-toggle");
+    const mobileMyAreaBtn = document.getElementById("mobile-my-area-btn");
 
     if (myAreaSettingsBtn) {
         myAreaSettingsBtn.addEventListener("click", (e) => {
@@ -941,6 +1004,115 @@ function initModal() {
         loginBtn.addEventListener("click", (e) => {
             e.preventDefault();
             openModal("login-modal");
+        });
+    }
+
+    // モバイルメニューのボタンイベント
+    if (mobileMyAreaSettingsBtn) {
+        mobileMyAreaSettingsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (mobileMenu) mobileMenu.classList.add("hidden");
+            openModal("my-area-modal");
+        });
+    }
+
+    if (mobileAboutAppBtn) {
+        mobileAboutAppBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (mobileMenu) mobileMenu.classList.add("hidden");
+            openModal("about-app-modal");
+        });
+    }
+
+    if (mobileHowToUseBtn) {
+        mobileHowToUseBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (mobileMenu) mobileMenu.classList.add("hidden");
+            openModal("how-to-use-modal");
+        });
+    }
+
+    if (mobileTermsBtn) {
+        mobileTermsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (mobileMenu) mobileMenu.classList.add("hidden");
+            openModal("terms-modal");
+        });
+    }
+
+    if (mobileLoginBtn) {
+        mobileLoginBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (mobileMenu) mobileMenu.classList.add("hidden");
+            openModal("login-modal");
+        });
+    }
+
+    if (mobileMyAreaBtn) {
+        mobileMyAreaBtn.addEventListener("click", async () => {
+            if (cityNavContent) cityNavContent.classList.add("hidden");
+            if (cityNavArrow) cityNavArrow.style.transform = "rotate(0deg)";
+            const myArea = await loadMyArea();
+            if (window.__map && myArea) {
+                window.__map.flyTo({
+                    center: [myArea.lng, myArea.lat],
+                    zoom: myArea.zoom,
+                    duration: 1000
+                });
+                clearCityLinksHighlight();
+                const myAreaBtn = document.getElementById("my-area-btn");
+                if (myAreaBtn) {
+                    myAreaBtn.classList.add("bg-blue-700", "font-bold");
+                    myAreaBtn.classList.remove("bg-transparent");
+                }
+            } else if (window.__map) {
+                openModal("my-area-modal");
+            }
+        });
+    }
+
+    if (mobileLogoutBtn) {
+        mobileLogoutBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            if (mobileMenu) mobileMenu.classList.add("hidden");
+
+            // フォームを作成して送信（Turbo Drive対応）
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = "/users/sign_out";
+
+            // CSRFトークンを追加
+            const csrfInput = document.createElement("input");
+            csrfInput.type = "hidden";
+            csrfInput.name = "authenticity_token";
+            csrfInput.value = getCSRFToken();
+            form.appendChild(csrfInput);
+
+            // method override for DELETE
+            const methodInput = document.createElement("input");
+            methodInput.type = "hidden";
+            methodInput.name = "_method";
+            methodInput.value = "delete";
+            form.appendChild(methodInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    if (mobileMyPinsToggle) {
+        mobileMyPinsToggle.addEventListener("click", () => {
+            showMyPinsOnly = !showMyPinsOnly;
+            console.log("トグル切り替え:", showMyPinsOnly ? "ON（自分のピンのみ）" : "OFF（全ピン）");
+            updateToggleButton(mobileMyPinsToggle, showMyPinsOnly);
+
+            // ピンを再読み込み
+            const map = window.__map;
+            if (map) {
+                loadPins(map);
+            } else {
+                console.error("地図オブジェクトが見つかりません");
+            }
         });
     }
 

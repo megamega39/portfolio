@@ -3,47 +3,122 @@
   <div class="flex items-center">
     <%= image_tag "magurologo.png", alt: "マグロマップ", id: "logo", class: "h-8 w-auto cursor-pointer" %>
   </div>
-  <nav class="flex gap-4 items-center">
+  <!-- ハンバーガーメニューボタン（スマホのみ表示） -->
+  <button id="mobile-menu-btn" class="md:hidden text-white p-2 focus:outline-none">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <!-- デスクトップメニュー -->
+  <nav class="hidden md:flex gap-4 items-center">
     <button id="my-area-settings-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">マイエリア設定</button>
     <button id="about-app-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">このアプリについて</button>
     <button id="how-to-use-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">使い方</button>
     <button id="terms-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer">利用規約</button>
     <% if user_signed_in? %>
-      <span class="text-white mr-2"><%= current_user.user_name %></span>
-      <button id="logout-btn" class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors cursor-pointer font-medium">ログアウト</button>
+      <span class="text-white mr-2 text-sm"><%= current_user.user_name %></span>
+      <button id="logout-btn" class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors cursor-pointer font-medium text-sm">ログアウト</button>
     <% else %>
-      <button id="login-btn" class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors cursor-pointer font-medium">ログイン</button>
+      <button id="login-btn" class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors cursor-pointer font-medium text-sm">ログイン</button>
     <% end %>
   </nav>
 </header>
 
-<!-- 都市ナビゲーション -->
-<nav class="bg-blue-500 text-white px-4 py-2 flex gap-4 items-center z-40 flex-wrap justify-between">
-  <div class="flex gap-4 items-center flex-wrap">
-    <button id="my-area-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors font-medium">マイエリア</button>
-    <span class="text-sm font-medium">主要都市:</span>
-    <button data-city="tokyo" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">東京</button>
-    <button data-city="kanagawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">神奈川</button>
-    <button data-city="chiba" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">千葉</button>
-    <button data-city="saitama" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">埼玉</button>
-    <button data-city="osaka" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">大阪</button>
-    <button data-city="hyogo" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">兵庫</button>
-    <button data-city="kyoto" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">京都</button>
-    <button data-city="fukuoka" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">福岡</button>
-    <button data-city="aichi" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">愛知</button>
-    <button data-city="hokkaido" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">北海道</button>
-    <button data-city="miyagi" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">宮城</button>
-    <button data-city="hiroshima" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">広島</button>
-    <button data-city="okinawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">沖縄</button>
-  </div>
-  <% if user_signed_in? %>
-    <div class="flex items-center gap-2">
-      <span class="text-sm">自分のピンのみ表示</span>
-      <button id="my-pins-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" role="switch" aria-checked="false">
-        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+<!-- モバイルメニュー（スマホのみ表示） -->
+<div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+  <div class="bg-blue-600 text-white w-64 h-full shadow-lg overflow-y-auto">
+    <div class="flex justify-between items-center p-4 border-b border-blue-500">
+      <h2 class="text-lg font-bold">メニュー</h2>
+      <button id="mobile-menu-close" class="text-white p-2 focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
       </button>
     </div>
-  <% end %>
+    <nav class="flex flex-col p-4 space-y-2">
+      <button id="mobile-my-area-settings-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">マイエリア設定</button>
+      <button id="mobile-about-app-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">このアプリについて</button>
+      <button id="mobile-how-to-use-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">使い方</button>
+      <button id="mobile-terms-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">利用規約</button>
+      <% if user_signed_in? %>
+        <div class="px-4 py-3 border-t border-blue-500 mt-2">
+          <p class="text-sm text-blue-200 mb-2"><%= current_user.user_name %></p>
+          <button id="mobile-logout-btn" class="w-full bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors font-medium">ログアウト</button>
+        </div>
+      <% else %>
+        <div class="px-4 py-3 border-t border-blue-500 mt-2">
+          <button id="mobile-login-btn" class="w-full bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors font-medium">ログイン</button>
+        </div>
+      <% end %>
+    </nav>
+  </div>
+</div>
+
+<!-- 都市ナビゲーション -->
+<nav class="bg-blue-500 text-white px-2 sm:px-4 py-2 z-40">
+  <!-- スマホ用：折りたたみ可能 -->
+  <div class="md:hidden">
+    <button id="city-nav-toggle" class="w-full flex justify-between items-center px-2 py-2 rounded hover:bg-blue-600 transition-colors">
+      <span class="text-sm font-medium">主要都市を選択</span>
+      <svg class="w-5 h-5 transition-transform" id="city-nav-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      </svg>
+    </button>
+    <div id="city-nav-content" class="hidden mt-2 space-y-1">
+      <button id="mobile-my-area-btn" class="w-full text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors font-medium">マイエリア</button>
+      <div class="grid grid-cols-2 gap-1">
+        <button data-city="tokyo" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">東京</button>
+        <button data-city="kanagawa" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">神奈川</button>
+        <button data-city="chiba" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">千葉</button>
+        <button data-city="saitama" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">埼玉</button>
+        <button data-city="osaka" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">大阪</button>
+        <button data-city="hyogo" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">兵庫</button>
+        <button data-city="kyoto" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">京都</button>
+        <button data-city="fukuoka" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">福岡</button>
+        <button data-city="aichi" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">愛知</button>
+        <button data-city="hokkaido" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">北海道</button>
+        <button data-city="miyagi" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">宮城</button>
+        <button data-city="hiroshima" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">広島</button>
+        <button data-city="okinawa" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm col-span-2">沖縄</button>
+      </div>
+      <% if user_signed_in? %>
+        <div class="flex items-center justify-between px-2 py-2 border-t border-blue-400 mt-2">
+          <span class="text-sm">自分のピンのみ表示</span>
+          <button id="mobile-my-pins-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors" role="switch" aria-checked="false">
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+          </button>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <!-- デスクトップ用 -->
+  <div class="hidden md:flex gap-4 items-center flex-wrap justify-between">
+    <div class="flex gap-4 items-center flex-wrap">
+      <button id="my-area-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors font-medium">マイエリア</button>
+      <span class="text-sm font-medium">主要都市:</span>
+      <button data-city="tokyo" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">東京</button>
+      <button data-city="kanagawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">神奈川</button>
+      <button data-city="chiba" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">千葉</button>
+      <button data-city="saitama" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">埼玉</button>
+      <button data-city="osaka" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">大阪</button>
+      <button data-city="hyogo" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">兵庫</button>
+      <button data-city="kyoto" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">京都</button>
+      <button data-city="fukuoka" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">福岡</button>
+      <button data-city="aichi" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">愛知</button>
+      <button data-city="hokkaido" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">北海道</button>
+      <button data-city="miyagi" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">宮城</button>
+      <button data-city="hiroshima" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">広島</button>
+      <button data-city="okinawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">沖縄</button>
+    </div>
+    <% if user_signed_in? %>
+      <div class="flex items-center gap-2">
+        <span class="text-sm">自分のピンのみ表示</span>
+        <button id="my-pins-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" role="switch" aria-checked="false">
+          <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+        </button>
+      </div>
+    <% end %>
+  </div>
 </nav>
 
 <!-- 地図コンテナ -->
@@ -51,11 +126,11 @@
   <div id="map" class="absolute inset-0"></div>
   
   <!-- ピン登録ボタンとキャンセルボタン（右下） -->
-  <div class="absolute bottom-4 right-4 flex gap-2 z-40">
-    <button id="pin-registration-btn" class="bg-blue-600 text-white px-6 py-3 rounded shadow-lg hover:bg-blue-700 transition-colors">
+  <div class="fixed bottom-4 right-4 md:absolute md:bottom-4 md:right-4 flex gap-2 z-50 pointer-events-none">
+    <button id="pin-registration-btn" class="bg-blue-600 text-white px-5 py-4 md:px-6 md:py-3 rounded-full md:rounded shadow-lg hover:bg-blue-700 active:bg-blue-800 transition-colors text-base md:text-base font-medium pointer-events-auto touch-manipulation">
       ピン登録
     </button>
-    <button id="cancel-registration-btn" class="hidden bg-red-500 text-white px-6 py-3 rounded shadow-lg hover:bg-red-600 transition-colors">
+    <button id="cancel-registration-btn" class="hidden bg-red-500 text-white px-5 py-4 md:px-6 md:py-3 rounded-full md:rounded shadow-lg hover:bg-red-600 active:bg-red-700 transition-colors text-base md:text-base font-medium pointer-events-auto touch-manipulation">
       キャンセル
     </button>
   </div>
