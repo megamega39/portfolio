@@ -198,6 +198,9 @@ function initCityLinks(map) {
 // ピンのマーカーを管理するオブジェクト
 const pinMarkers = {};
 
+// 自分のピンのみ表示するトグル状態
+let showMyPinsOnly = false;
+
 // APIからピンデータを取得して地図上に表示
 async function loadPins(map) {
     if (!map) {
@@ -230,21 +233,50 @@ async function loadPins(map) {
             console.log("dataプロパティ内の配列を使用");
         }
 
+        // 自分のピンのみ表示モードの場合、フィルタリング
+        if (showMyPinsOnly) {
+            const currentUserId = getCurrentUserId();
+            console.log("フィルタリング開始: showMyPinsOnly=", showMyPinsOnly, "currentUserId=", currentUserId);
+            if (currentUserId) {
+                const beforeCount = pinsData.length;
+                console.log("フィルタリング前のピン数:", beforeCount);
+                // user_idを数値に変換して比較（null/undefinedの場合は除外）
+                pinsData = pinsData.filter(pin => {
+                    if (!pin.user_id) {
+                        console.log(`ピンID ${pin.id}: user_idがありません（未ログイン投稿）`);
+                        return false; // user_idがないピン（未ログイン投稿）は除外
+                    }
+                    const pinUserId = typeof pin.user_id === 'number' ? pin.user_id : parseInt(pin.user_id, 10);
+                    const matches = pinUserId === currentUserId;
+                    if (matches) {
+                        console.log(`ピンID ${pin.id}: 自分のピン（user_id: ${pinUserId}）`);
+                    }
+                    return matches;
+                });
+                console.log(`自分のピンのみ表示: ${beforeCount}件 → ${pinsData.length}件`);
+            } else {
+                console.warn("ユーザーIDが取得できませんでした。フィルタリングをスキップします。");
+            }
+        } else {
+            console.log("全ピン表示モード");
+        }
+
+        // 既存のマーカーを削除（MapLibreの標準メソッドを使用）
+        // フィルタリング前でも後でも、常に既存のマーカーを削除してから新しいマーカーを追加
+        const markerCount = Object.keys(pinMarkers).length;
+        if (markerCount > 0) {
+            console.log(`既存のマーカー${markerCount}件を削除します`);
+            Object.values(pinMarkers).forEach(marker => {
+                if (marker && typeof marker.remove === "function") {
+                    marker.remove();
+                }
+            });
+            // マーカーオブジェクトをクリア
+            Object.keys(pinMarkers).forEach(key => delete pinMarkers[key]);
+        }
+
         if (pinsData.length > 0) {
             console.log(`有効なピンデータ: ${pinsData.length}件`);
-
-            // 既存のマーカーを削除（MapLibreの標準メソッドを使用）
-            const markerCount = Object.keys(pinMarkers).length;
-            if (markerCount > 0) {
-                console.log(`既存のマーカー${markerCount}件を削除します`);
-                Object.values(pinMarkers).forEach(marker => {
-                    if (marker && typeof marker.remove === "function") {
-                        marker.remove();
-                    }
-                });
-                // マーカーオブジェクトをクリア
-                Object.keys(pinMarkers).forEach(key => delete pinMarkers[key]);
-            }
 
             // pinsData でループ
             let successCount = 0;
@@ -480,15 +512,25 @@ function showPinDetails(pin) {
     // 削除トークンを保存（削除時に使用）
     // 注意: ピン作成時に返されたdelete_tokenをlocalStorageに保存する必要があります
     modal.dataset.pinId = pin.id;
+    modal.dataset.pinUserId = pin.user_id || ""; // ピンのuser_idを保存
 
     // localStorageから削除トークンを取得
     const storedToken = localStorage.getItem(`pin_delete_token_${pin.id}`);
     modal.dataset.deleteToken = storedToken || "";
 
-    // 削除トークンがない場合は削除ボタンを非表示
+    // 削除ボタンの表示判定
     const deleteBtn = document.getElementById("modal-delete-btn");
     if (deleteBtn) {
-        if (storedToken) {
+        // ログイン状態を確認
+        const isLoggedIn = document.getElementById("logout-btn") !== null;
+        const pinUserId = pin.user_id;
+
+        // 削除可能な条件：
+        // 1. ログインしていて、ピンにuser_idが設定されている（サーバー側で自分のピンかチェック）
+        // 2. 未ログインだが、delete_tokenがある
+        const canDelete = (isLoggedIn && pinUserId) || storedToken;
+
+        if (canDelete) {
             deleteBtn.classList.remove("hidden");
             deleteBtn.disabled = false;
         } else {
@@ -515,6 +557,34 @@ function closeModal(modalId) {
     }
 }
 
+// 現在のログインユーザーIDを取得（ヘッダーから）
+function getCurrentUserId() {
+    const header = document.querySelector("header");
+    if (header) {
+        const userId = header.dataset.currentUserId;
+        return userId ? parseInt(userId, 10) : null;
+    }
+    return null;
+}
+
+// トグルボタンの見た目を更新
+function updateToggleButton(toggleBtn, isOn) {
+    const span = toggleBtn.querySelector("span");
+    if (isOn) {
+        toggleBtn.classList.remove("bg-gray-300");
+        toggleBtn.classList.add("bg-blue-600");
+        span.classList.remove("translate-x-1");
+        span.classList.add("translate-x-6");
+        toggleBtn.setAttribute("aria-checked", "true");
+    } else {
+        toggleBtn.classList.remove("bg-blue-600");
+        toggleBtn.classList.add("bg-gray-300");
+        span.classList.remove("translate-x-6");
+        span.classList.add("translate-x-1");
+        toggleBtn.setAttribute("aria-checked", "false");
+    }
+}
+
 // モーダルの初期化
 function initModal() {
     // ロゴのクリックイベント（ページ更新）
@@ -531,6 +601,9 @@ function initModal() {
     const termsBtn = document.getElementById("terms-btn");
     const pinRegistrationBtn = document.getElementById("pin-registration-btn");
     const modalDeleteBtn = document.getElementById("modal-delete-btn");
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const myPinsToggle = document.getElementById("my-pins-toggle");
 
     if (aboutAppBtn) {
         aboutAppBtn.addEventListener("click", (e) => {
@@ -565,6 +638,183 @@ function initModal() {
     if (cancelRegistrationBtn) {
         cancelRegistrationBtn.addEventListener("click", () => {
             cancelRegistrationMode();
+        });
+    }
+
+    // ログインボタンのイベントリスナー
+    if (loginBtn) {
+        loginBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openModal("login-modal");
+        });
+    }
+
+    // ログアウトボタンのイベントリスナー
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+
+            // フォームを作成して送信（Turbo Drive対応）
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = "/users/sign_out";
+
+            // CSRFトークンを追加
+            const csrfInput = document.createElement("input");
+            csrfInput.type = "hidden";
+            csrfInput.name = "authenticity_token";
+            csrfInput.value = getCSRFToken();
+            form.appendChild(csrfInput);
+
+            // method override for DELETE
+            const methodInput = document.createElement("input");
+            methodInput.type = "hidden";
+            methodInput.name = "_method";
+            methodInput.value = "delete";
+            form.appendChild(methodInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    // CSRFトークンを取得する関数
+    function getCSRFToken() {
+        const token = document.querySelector('meta[name="csrf-token"]');
+        return token ? token.getAttribute('content') : '';
+    }
+
+    // ログインフォームの送信処理
+    const loginForm = document.getElementById("login-form");
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById("login-email").value;
+            const password = document.getElementById("login-password").value;
+            const errorDiv = document.getElementById("login-error");
+
+            try {
+                const response = await fetch("/users/sign_in", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRF-Token": getCSRFToken(),
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        user: {
+                            email: email,
+                            password: password
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    closeModal("login-modal");
+                    window.location.reload();
+                } else {
+                    errorDiv.textContent = result.errors ? result.errors.join(", ") : "ログインに失敗しました";
+                    errorDiv.classList.remove("hidden");
+                }
+            } catch (error) {
+                console.error("ログインエラー:", error);
+                errorDiv.textContent = "ログインに失敗しました";
+                errorDiv.classList.remove("hidden");
+            }
+        });
+    }
+
+    // 新規登録フォームの送信処理
+    const signupForm = document.getElementById("signup-form");
+    if (signupForm) {
+        signupForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const userName = document.getElementById("signup-user-name").value;
+            const email = document.getElementById("signup-email").value;
+            const password = document.getElementById("signup-password").value;
+            const passwordConfirmation = document.getElementById("signup-password-confirmation").value;
+            const errorDiv = document.getElementById("signup-error");
+
+            if (password !== passwordConfirmation) {
+                errorDiv.textContent = "パスワードが一致しません";
+                errorDiv.classList.remove("hidden");
+                return;
+            }
+
+            try {
+                const response = await fetch("/users", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRF-Token": getCSRFToken(),
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        user: {
+                            user_name: userName,
+                            email: email,
+                            password: password,
+                            password_confirmation: passwordConfirmation
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    closeModal("signup-modal");
+                    window.location.reload();
+                } else {
+                    errorDiv.textContent = result.errors ? result.errors.join(", ") : "登録に失敗しました";
+                    errorDiv.classList.remove("hidden");
+                }
+            } catch (error) {
+                console.error("登録エラー:", error);
+                errorDiv.textContent = "登録に失敗しました";
+                errorDiv.classList.remove("hidden");
+            }
+        });
+    }
+
+    // ログイン・新規登録モーダル間の切り替え
+    const signupLink = document.getElementById("signup-link");
+    if (signupLink) {
+        signupLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            closeModal("login-modal");
+            openModal("signup-modal");
+        });
+    }
+
+    const loginLink = document.getElementById("login-link");
+    if (loginLink) {
+        loginLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            closeModal("signup-modal");
+            openModal("login-modal");
+        });
+    }
+
+    // 自分のピンのみ表示トグルボタン
+    if (myPinsToggle) {
+        myPinsToggle.addEventListener("click", () => {
+            showMyPinsOnly = !showMyPinsOnly;
+            console.log("トグル切り替え:", showMyPinsOnly ? "ON（自分のピンのみ）" : "OFF（全ピン）");
+            updateToggleButton(myPinsToggle, showMyPinsOnly);
+
+            // ピンを再読み込み
+            const map = window.__map;
+            if (map) {
+                loadPins(map);
+            } else {
+                console.error("地図オブジェクトが見つかりません");
+            }
         });
     }
 
@@ -703,7 +953,7 @@ function initModal() {
     }
 
     // すべてのモーダルに背景クリックで閉じる機能を追加
-    const modals = ["about-app-modal", "how-to-use-modal", "terms-modal", "pin-registration-modal", "pin-modal"];
+    const modals = ["about-app-modal", "how-to-use-modal", "terms-modal", "pin-registration-modal", "pin-modal", "login-modal", "signup-modal"];
     modals.forEach((modalId) => {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -723,14 +973,20 @@ function initModal() {
 
             const pinId = modal.dataset.pinId;
             const deleteToken = modal.dataset.deleteToken;
+            const pinUserId = modal.dataset.pinUserId;
 
             if (!pinId) {
                 alert("ピンIDが見つかりません");
                 return;
             }
 
-            if (!deleteToken) {
-                alert("削除トークンが見つかりません。このピンは削除できません。");
+            // ログイン状態を確認
+            const isLoggedIn = document.getElementById("logout-btn") !== null;
+
+            // 削除権限のチェック（フロントエンド側の簡易チェック）
+            // サーバー側で最終的な権限チェックを行う
+            if (!deleteToken && !isLoggedIn) {
+                alert("削除権限がありません。");
                 return;
             }
 
@@ -739,14 +995,20 @@ function initModal() {
             }
 
             try {
+                // リクエストボディを準備
+                const requestBody = {};
+                if (deleteToken) {
+                    requestBody.delete_token = deleteToken;
+                }
+
                 const response = await fetch(`/api/pins/${pinId}`, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
+                        "X-CSRF-Token": getCSRFToken()
                     },
-                    body: JSON.stringify({
-                        delete_token: deleteToken
-                    })
+                    credentials: 'same-origin',
+                    body: JSON.stringify(requestBody)
                 });
 
                 const result = await response.json();
@@ -1008,6 +1270,13 @@ function initializeApp() {
     }
     // マーカー配列もリセット
     Object.keys(pinMarkers).forEach(key => delete pinMarkers[key]);
+
+    // トグル状態をリセット
+    showMyPinsOnly = false;
+    const myPinsToggle = document.getElementById("my-pins-toggle");
+    if (myPinsToggle) {
+        updateToggleButton(myPinsToggle, false);
+    }
 
     initMap();
     initModal();

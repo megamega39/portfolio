@@ -21,7 +21,15 @@ class Api::PinsController < ApplicationController
     delete_token = SecureRandom.urlsafe_base64(32)
     delete_token_digest = BCrypt::Password.create(delete_token)
 
-    pin = Pin.new(pin_params.merge(delete_token_digest: delete_token_digest))
+    # ピンのパラメータを準備
+    pin_attributes = pin_params.merge(delete_token_digest: delete_token_digest)
+    
+    # ログインしている場合はuser_idを設定
+    if user_signed_in?
+      pin_attributes[:user_id] = current_user.id
+    end
+
+    pin = Pin.new(pin_attributes)
 
     if pin.save
       render json: {
@@ -51,12 +59,24 @@ class Api::PinsController < ApplicationController
       return
     end
 
-    # delete_tokenで認証
-    delete_token = params[:delete_token]
-    unless delete_token && BCrypt::Password.new(pin.delete_token_digest) == delete_token
+    # 削除権限のチェック
+    can_delete = false
+    
+    # 1. ログインしている場合：自分のピンかチェック
+    if user_signed_in? && pin.user_id == current_user.id
+      can_delete = true
+    # 2. 未ログインまたは他人のピンの場合：delete_tokenで認証
+    else
+      delete_token = params[:delete_token]
+      if delete_token && pin.delete_token_digest.present?
+        can_delete = BCrypt::Password.new(pin.delete_token_digest) == delete_token
+      end
+    end
+
+    unless can_delete
       render json: {
         status: "error",
-        error: "Invalid delete token"
+        error: "削除権限がありません"
       }, status: :unauthorized
       return
     end
@@ -95,7 +115,8 @@ class Api::PinsController < ApplicationController
       lat: pin.lat.to_f,
       lng: pin.lng.to_f,
       icon_type: pin.icon_type,
-      created_at: pin.created_at.iso8601
+      created_at: pin.created_at.iso8601,
+      user_id: pin.user_id # ユーザーIDを追加（削除権限の判定に使用）
     }
   end
 
