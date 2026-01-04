@@ -1,0 +1,56 @@
+ja:
+  devise:
+    failure:
+      already_authenticated: "すでにログインしています。"
+      unauthenticated: "アカウント登録もしくはログインしてください。"
+      unconfirmed: "メールアドレスの確認が必要です。"
+      locked: "あなたのアカウントは凍結されています。"
+      invalid: "メールアドレスまたはパスワードが違います。"
+      invalid_token: "認証キーが不正です。"
+      timeout: "セッションがタイムアウトしました。もう一度ログインしてください。"
+      inactive: "アカウントが有効化されていません。"
+    registrations:
+      signed_up: "アカウント登録が完了しました。"
+      signed_up_but_unconfirmed: "本人確認のためのメールを送信しました。メール内のリンクからアカウントを有効化させてください。"
+      updated: "アカウント情報を変更しました。"
+      destroyed: "アカウントを削除しました。またのご利用をお待ちしております。"
+    sessions:
+      signed_in: "ログインしました。"
+      signed_out: "ログアウトしました。"
+    passwords:
+      send_instructions: "パスワード再設定方法をメールで送信しました。"
+      updated: "パスワードを変更しました。"
+      updated_not_active: "パスワードを変更しました。"
+    confirmations:
+      confirmed: "メールアドレスが確認できました。"
+      send_instructions: "アカウントの有効化について数分以内にメールでご連絡いたします。"
+    unlocks:
+      send_instructions: "アカウントの凍結解除方法を数分以内にメールでご連絡します。"
+      unlocked: "アカウントを凍結解除しました。"
+  errors:
+    messages:
+      already_confirmed: "は既に登録済みです。"
+      confirmation_period_expired: "の期限が切れました。%{period}までに登録してください。新しく登録するにはメールアドレスを変更してください。"
+      expired: "の有効期限が切れました。新しく登録してください。"
+      not_found: "は見つかりませんでした。"
+      not_locked: "は凍結されていません。"
+      not_saved:
+        one: "エラーが発生したため、%{resource}を保存できませんでした:"
+        other: "%{count}件のエラーが発生したため、%{resource}を保存できませんでした:"
+  activerecord:
+    errors:
+      models:
+        user:
+          attributes:
+            email:
+              taken: "は既に使用されています"
+              invalid: "は不正な値です"
+              blank: "を入力してください"
+            password:
+              too_short: "は%{count}文字以上で入力してください"
+              confirmation: "とパスワード（確認）が一致しません"
+              blank: "を入力してください"
+            user_name:
+              taken: "は既に使用されています"
+              blank: "を入力してください"
+

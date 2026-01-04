@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_01_01_000004) do
+ActiveRecord::Schema[7.2].define(version: 2024_01_01_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -25,10 +25,13 @@ ActiveRecord::Schema[7.2].define(version: 2024_01_01_000004) do
     t.string "delete_token_digest", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "visibility", default: 0, null: false
+    t.datetime "edited_at"
     t.index ["created_at"], name: "index_pins_on_created_at"
     t.index ["lat"], name: "index_pins_on_lat"
     t.index ["lng"], name: "index_pins_on_lng"
     t.index ["user_id"], name: "index_pins_on_user_id"
+    t.index ["visibility"], name: "index_pins_on_visibility"
   end
 
   create_table "users", force: :cascade do |t|
@@ -43,8 +46,12 @@ ActiveRecord::Schema[7.2].define(version: 2024_01_01_000004) do
     t.decimal "my_area_lat", precision: 9, scale: 6
     t.decimal "my_area_lng", precision: 9, scale: 6
     t.decimal "my_area_zoom", precision: 3, scale: 1, default: "12.0"
+    t.string "share_map_token_digest"
+    t.integer "role", default: 0, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["role"], name: "index_users_on_role"
+    t.index ["share_map_token_digest"], name: "index_users_on_share_map_token_digest"
   end
 
   add_foreign_key "pins", "users"

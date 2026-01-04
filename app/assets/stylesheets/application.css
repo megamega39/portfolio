@@ -50,3 +50,38 @@
   max-width: 40px !important;
   max-height: 40px !important;
 }
+
+/* スポットライト方式のオーバーレイ（ピン登録/マイエリア選択モード用） */
+.map-spotlight-overlay {
+  /* 
+   * mask-image: 白=表示、黒=非表示
+   * 中央70pxは黒（非表示=透明）、70pxから95pxまで黒→白のグラデーション、95px以降は白（表示=暗転）
+   */
+  mask-image: radial-gradient(circle at 50% 50%, black 70px, black 70px, white 95px, white 100%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 70px, black 70px, white 95px, white 100%);
+  /* マスクの範囲をオーバーレイ全体に適用 */
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-position: center;
+  -webkit-mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* 「位置を確定」ボタンのレスポンシブ配置 */
+.confirm-location-btn {
+  /* スマホ: 下部コントロール（bottom-4 + py-5 = 約56px）+ 余白（約64px）= 120px */
+  bottom: 120px;
+  /* セーフエリアを考慮（iPhoneのホームバー対応） */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  margin-bottom: calc(env(safe-area-inset-bottom, 0px) * 0.5);
+}
+
+/* PC表示（md以上）: 既存の位置を維持 */
+@media (min-width: 768px) {
+  .confirm-location-btn {
+    bottom: 80px;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+}

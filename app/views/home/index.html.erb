@@ -2,9 +2,9 @@
 <!-- トースト通知コンテナ -->
 <div id="toast-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 <!-- ヘッダー -->
-<header class="flex-none relative bg-blue-600 text-white px-4 py-3 flex justify-between items-center z-50" data-current-user-id="<%= user_signed_in? ? current_user.id : '' %>" data-whale-icon="<%= image_path('whale-icon.png') %>" data-tuna-icon="<%= image_path('tuna-icon.png') %>">
+<header class="flex-none relative bg-blue-600 text-white px-3 md:px-4 py-2 md:py-3 flex justify-between items-center z-50" data-current-user-id="<%= user_signed_in? ? current_user.id : '' %>" data-is-admin="<%= user_signed_in? && current_user.admin? ? 'true' : 'false' %>" data-whale-icon="<%= image_path('whale-icon.png') %>" data-tuna-icon="<%= image_path('tuna-icon.png') %>">
   <div class="flex items-center">
-    <%= image_tag "magurologo.png", alt: "マグロマップ", id: "logo", class: "h-8 w-auto cursor-pointer" %>
+    <%= image_tag "magurologo.png", alt: "マグロマップ", id: "logo", class: "h-7 md:h-8 w-auto cursor-pointer" %>
   </div>
   <!-- ハンバーガーメニューボタン（スマホのみ表示） -->
   <button id="mobile-menu-btn" class="md:hidden text-white p-2 focus:outline-none">
@@ -29,7 +29,7 @@
 
 <!-- モバイルメニュー（スマホのみ表示） -->
 <div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-  <div class="bg-blue-600 text-white w-64 h-full shadow-lg overflow-y-auto">
+  <div id="mobile-menu-drawer" class="bg-blue-600 text-white w-64 h-full shadow-lg overflow-y-auto fixed right-0 top-0 translate-x-full transition-transform duration-300 ease-out">
     <div class="flex justify-between items-center p-4 border-b border-blue-500">
       <h2 class="text-lg font-bold">メニュー</h2>
       <button id="mobile-menu-close" class="text-white p-2 focus:outline-none">
@@ -38,11 +38,48 @@
         </svg>
       </button>
     </div>
-    <nav class="flex flex-col p-4 space-y-2">
+    <nav class="flex flex-col p-4 space-y-2 overflow-y-auto">
+      <!-- 主要都市ナビゲーション（スマホ用） -->
+      <div class="border-b border-blue-500 pb-3 mb-3">
+        <h3 class="text-sm font-semibold text-blue-200 mb-2 px-2">主要都市</h3>
+        <div class="grid grid-cols-2 gap-1">
+          <button id="mobile-my-area-btn" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm font-medium col-span-2">マイエリア</button>
+          <button data-city="tokyo" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">東京</button>
+          <button data-city="kanagawa" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">神奈川</button>
+          <button data-city="chiba" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">千葉</button>
+          <button data-city="saitama" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">埼玉</button>
+          <button data-city="osaka" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">大阪</button>
+          <button data-city="hyogo" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">兵庫</button>
+          <button data-city="kyoto" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">京都</button>
+          <button data-city="fukuoka" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">福岡</button>
+          <button data-city="aichi" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">愛知</button>
+          <button data-city="hokkaido" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">北海道</button>
+          <button data-city="miyagi" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">宮城</button>
+          <button data-city="hiroshima" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm">広島</button>
+          <button data-city="okinawa" class="city-link text-left px-3 py-2 rounded hover:bg-blue-700 transition-colors text-sm col-span-2">沖縄</button>
+        </div>
+      </div>
+      
+      <!-- ログイン時のみ表示：共有・自分のピンのみ表示 -->
+      <% if user_signed_in? %>
+        <div class="border-b border-blue-500 pb-3 mb-3">
+          <button id="mobile-share-map-btn" class="w-full text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors font-medium">共有</button>
+          <div class="flex items-center justify-between px-4 py-3">
+            <span class="text-sm">自分のピンのみ表示</span>
+            <button id="mobile-my-pins-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors flex-shrink-0" role="switch" aria-checked="false">
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+            </button>
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- その他のメニュー -->
       <button id="mobile-my-area-settings-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">マイエリア設定</button>
       <button id="mobile-about-app-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">このアプリについて</button>
       <button id="mobile-how-to-use-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">使い方</button>
       <button id="mobile-terms-btn" class="text-left px-4 py-3 rounded hover:bg-blue-700 transition-colors">利用規約</button>
+      
+      <!-- ログイン/ログアウト -->
       <% if user_signed_in? %>
         <div class="px-4 py-3 border-t border-blue-500 mt-2">
           <p class="text-sm text-blue-200 mb-2"><%= current_user.user_name %></p>
@@ -57,45 +94,18 @@
   </div>
 </div>
 
-<!-- 都市ナビゲーション -->
-<nav class="flex-none bg-blue-500 text-white px-2 sm:px-4 py-2 z-40">
-  <!-- スマホ用：折りたたみ可能 -->
-  <div class="md:hidden">
-    <button id="city-nav-toggle" class="w-full flex justify-between items-center px-2 py-2 rounded hover:bg-blue-600 transition-colors">
-      <span class="text-sm font-medium">主要都市を選択</span>
-      <svg class="w-5 h-5 transition-transform" id="city-nav-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-      </svg>
-    </button>
-    <div id="city-nav-content" class="hidden mt-2 space-y-1">
-      <button id="mobile-my-area-btn" class="w-full text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors font-medium">マイエリア</button>
-      <div class="grid grid-cols-2 gap-1">
-        <button data-city="tokyo" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">東京</button>
-        <button data-city="kanagawa" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">神奈川</button>
-        <button data-city="chiba" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">千葉</button>
-        <button data-city="saitama" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">埼玉</button>
-        <button data-city="osaka" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">大阪</button>
-        <button data-city="hyogo" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">兵庫</button>
-        <button data-city="kyoto" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">京都</button>
-        <button data-city="fukuoka" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">福岡</button>
-        <button data-city="aichi" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">愛知</button>
-        <button data-city="hokkaido" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">北海道</button>
-        <button data-city="miyagi" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">宮城</button>
-        <button data-city="hiroshima" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm">広島</button>
-        <button data-city="okinawa" class="city-link text-left px-2 py-2 rounded hover:bg-blue-600 transition-colors text-sm col-span-2">沖縄</button>
-      </div>
-      <% if user_signed_in? %>
-        <div class="flex items-center justify-between px-2 py-2 border-t border-blue-400 mt-2">
-          <span class="text-sm">自分のピンのみ表示</span>
-          <button id="mobile-my-pins-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors" role="switch" aria-checked="false">
-            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
-          </button>
-        </div>
-      <% end %>
-    </div>
-  </div>
-  <!-- デスクトップ用 -->
-  <div class="hidden md:flex gap-4 items-center flex-wrap justify-between">
+<!-- 共有マップ閲覧中バッジ -->
+<div id="shared-map-badge" class="hidden flex-none bg-yellow-500 text-white px-4 py-2 text-center text-sm font-medium z-40 flex items-center justify-between">
+  <span>共有マップ閲覧中</span>
+  <button id="exit-shared-map-btn" class="ml-4 bg-white text-yellow-600 px-3 py-1 rounded hover:bg-gray-100 transition-colors text-xs font-medium">
+    通常モードに戻る
+  </button>
+</div>
+
+
+<!-- 都市ナビゲーション（PCのみ表示） -->
+<nav class="hidden md:flex flex-none bg-blue-500 text-white px-2 sm:px-4 py-2 z-40">
+  <div class="flex gap-4 items-center flex-wrap w-full">
     <div class="flex gap-4 items-center flex-wrap">
       <button id="my-area-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors font-medium">マイエリア</button>
       <span class="text-sm font-medium">主要都市:</span>
@@ -114,7 +124,8 @@
       <button data-city="okinawa" class="city-link hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors">沖縄</button>
     </div>
     <% if user_signed_in? %>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 ml-auto">
+        <button id="share-map-btn" class="hover:underline bg-transparent border-none text-white cursor-pointer px-2 py-1 rounded hover:bg-blue-600 transition-colors font-medium">共有</button>
         <span class="text-sm">自分のピンのみ表示</span>
         <button id="my-pins-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" role="switch" aria-checked="false">
           <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
@@ -128,10 +139,15 @@
 <div class="flex-1 relative overflow-hidden">
   <div id="map" class="absolute inset-0"></div>
   
+  <!-- ピン登録/マイエリア選択モード用オーバーレイ（スポットライト方式） -->
+  <div id="map-overlay" class="hidden absolute inset-0 bg-black/14 pointer-events-none z-10 map-spotlight-overlay"></div>
+  
   <!-- ピン登録ボタンとキャンセルボタン（右下） -->
-  <div class="fixed bottom-4 right-4 md:absolute md:bottom-4 md:right-4 flex gap-2 z-50 pointer-events-none">
-    <button id="pin-registration-btn" class="bg-blue-600 text-white px-5 py-4 md:px-6 md:py-3 rounded-full md:rounded shadow-lg hover:bg-blue-700 active:bg-blue-800 transition-colors text-base md:text-base font-medium pointer-events-auto touch-manipulation">
-      ピン登録
+  <div class="fixed bottom-4 right-4 md:absolute md:bottom-4 md:right-4 flex gap-2 z-50 pointer-events-none" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <button id="pin-registration-btn" class="bg-blue-600 text-white px-6 py-5 md:px-6 md:py-3 rounded-full md:rounded shadow-xl hover:bg-blue-700 active:bg-blue-800 transition-colors text-lg md:text-base font-bold md:font-medium pointer-events-auto touch-manipulation flex items-center gap-2">
+      <span class="text-2xl md:text-base leading-none">＋</span>
+      <span class="md:hidden">ピン登録</span>
+      <span class="hidden md:inline">ピン登録</span>
     </button>
     <button id="cancel-registration-btn" class="hidden bg-red-500 text-white px-5 py-4 md:px-6 md:py-3 rounded-full md:rounded shadow-lg hover:bg-red-600 active:bg-red-700 transition-colors text-base md:text-base font-medium pointer-events-auto touch-manipulation">
       キャンセル
@@ -141,17 +157,44 @@
 
 <!-- モーダル：このアプリについて -->
 <div id="about-app-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md max-h-[80vh] overflow-y-auto">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-w-[90vw] max-h-[85vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-bold">このアプリについて</h2>
       <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('about-app-modal')">&times;</button>
     </div>
-    <div class="text-gray-700">
-      <p class="mb-4">マグロマップは、フードデリバリー配達員向けに<br>高単価案件が出やすいエリアを地図で共有するWebアプリです。</p>
-      <p class="mb-4">配達中に受けた案件の単価を地図上にピンとして登録し、<br>他の配達員と情報を共有することができます。</p>
-      <p class="mb-2">3000〜5999円の案件は 🐟 マグロアイコン</p>
-      <p class="mb-2">6000円以上の案件は 🐋 クジラアイコン</p>
-      <p>として表示され、一目で高単価エリアを把握できます。</p>
+    <div class="text-gray-700 space-y-4">
+      <div>
+        <h3 class="font-semibold mb-2 text-lg">📱 マグロマップとは</h3>
+        <p class="mb-2">マグロマップは、フードデリバリー配達員向けに高単価案件が出やすいエリアを地図で共有するWebアプリです。</p>
+        <p>配達中に受けた案件の単価を地図上にピンとして登録し、他の配達員と情報を共有することができます。</p>
+      </div>
+      
+      <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+        <p class="text-sm font-semibold text-yellow-800 mb-1">⚠️ 重要なお知らせ</p>
+        <p class="text-sm text-yellow-700">本サービスは、特定の配達プラットフォームとは一切関係のない非公式サービスです。投稿内容の正確性・完全性について、本サービスは一切保証しません。</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">📌 ピンのアイコンについて</h3>
+        <ul class="list-disc list-inside ml-4 space-y-1">
+          <li><strong>🐋 クジラアイコン</strong>：6000円以上の超高単価案件</li>
+          <li><strong>🐟 マグロアイコン</strong>：3000円以上5999円以下の高単価案件</li>
+        </ul>
+        <p class="mt-2 text-sm text-gray-600">アイコンを見るだけで、一目で高単価エリアを把握できます。</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">✨ 主な機能</h3>
+        <ul class="list-disc list-inside ml-4 space-y-1">
+          <li>地図上へのピン登録（金額・距離・時間帯・天候）</li>
+          <li>ピンの閲覧・編集・削除</li>
+          <li>公開/非公開ピンの設定（ログイン時）</li>
+          <li>自分のピンのみ表示（フィルタリング機能）</li>
+          <li>地図の共有（自分のピンを他人に見せることができる）</li>
+          <li>マイエリア設定（よく使うエリアを登録）</li>
+          <li>都市ナビゲーション（主要都市へのクイック移動）</li>
+        </ul>
+      </div>
     </div>
     <div class="mt-6 flex justify-end">
       <button onclick="closeModal('about-app-modal')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
@@ -163,23 +206,97 @@
 
 <!-- モーダル：使い方 -->
 <div id="how-to-use-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md max-h-[80vh] overflow-y-auto">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-w-[90vw] max-h-[85vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-bold">使い方</h2>
       <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('how-to-use-modal')">&times;</button>
     </div>
     <div class="text-gray-700 space-y-4">
-      <div>
-        <h3 class="font-semibold mb-2">1. ピンの登録</h3>
-        <p>右下の「ピン登録」ボタンをクリックし、地図上で位置を選択して情報を入力してください。</p>
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+        <h3 class="font-semibold mb-2 text-blue-800">🔓 未登録でも使える機能</h3>
+        <ul class="list-disc list-inside ml-4 space-y-1 text-sm text-blue-700">
+          <li>ピンの閲覧（公開ピンのみ）</li>
+          <li>ピンの登録（公開ピンのみ）</li>
+          <li>ピンの編集（同じブラウザから登録したピンのみ）</li>
+          <li>ピンの削除（同じブラウザから登録したピンのみ）</li>
+          <li>マイエリア設定（ブラウザに保存）</li>
+          <li>都市ナビゲーション</li>
+        </ul>
       </div>
-      <div>
-        <h3 class="font-semibold mb-2">2. ピンの確認</h3>
-        <p>地図上のピンをクリックすると、詳細情報（金額・距離・時間帯・天候）が表示されます。</p>
+      
+      <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+        <h3 class="font-semibold mb-2 text-green-800">🔐 ユーザー登録（ログイン）で使える機能</h3>
+        <ul class="list-disc list-inside ml-4 space-y-1 text-sm text-green-700">
+          <li>非公開ピンの作成（自分だけが見えるピン）</li>
+          <li>自分のピンのみ表示（フィルタリング機能）</li>
+          <li>地図の共有（自分のピンを他人に見せることができる）</li>
+          <li>マイエリア設定（サーバーに保存、どの端末からでもアクセス可能）</li>
+          <li>ログイン後も未ログイン時に登録したピンを編集・削除可能</li>
+        </ul>
       </div>
+      
       <div>
-        <h3 class="font-semibold mb-2">3. ピンの削除</h3>
-        <p>ピンをクリックして表示されたモーダルから「削除」ボタンで削除できます。</p>
+        <h3 class="font-semibold mb-2">📌 ピンの登録</h3>
+        <p class="mb-2">右下の「ピン登録」ボタンをクリックすると、地図中央に固定ピンが表示されます。地図をドラッグして登録したい位置を中央に合わせ、「位置を確定」ボタンを押してください。</p>
+        <p class="mb-2">入力項目：</p>
+        <ul class="list-disc list-inside ml-4 space-y-1 text-sm">
+          <li>金額：3000円以上9999円以下</li>
+          <li>配達距離：0.1km以上99.9km以下（小数点1桁まで）</li>
+          <li>時間帯：朝・昼・夕方・夜・深夜から選択</li>
+          <li>天候：晴れ・曇り・雨・雪から選択</li>
+          <li>公開設定（ログイン時のみ）：公開（みんなに見える）または非公開（自分だけ）</li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">🔍 ピンの確認</h3>
+        <p class="mb-2">地図上のピンをクリックすると、詳細情報（金額・距離・時間帯・天候）が表示されます。</p>
+        <p class="mb-2">ピンのアイコン：</p>
+        <ul class="list-disc list-inside ml-4 space-y-1 text-sm">
+          <li>🐋 クジラアイコン：6000円以上の高単価案件</li>
+          <li>🐟 マグロアイコン：3000円以上5999円以下の案件</li>
+        </ul>
+        <p class="mt-2 text-sm text-gray-600">※地図をズームアウト（縮小）すると、ピンは自動的に非表示になります（視認性向上のため）</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">✏️ ピンの編集</h3>
+        <p>自分のピンをクリックして表示されたモーダルから「編集」ボタンを押すと、ピンの情報を変更できます。</p>
+        <p class="text-sm text-gray-600 mt-1">※未ログインで登録したピンも、同じブラウザから編集可能です</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">🗑️ ピンの削除</h3>
+        <p>自分のピンをクリックして表示されたモーダルから「削除」ボタンで削除できます。</p>
+        <p class="text-sm text-gray-600 mt-1">※未ログインで登録したピンも、同じブラウザから削除可能です</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">👤 ログイン機能</h3>
+        <p class="mb-2">ログインすると、以下の機能が利用できます：</p>
+        <ul class="list-disc list-inside ml-4 space-y-1 text-sm">
+          <li>非公開ピンの作成（自分だけが見えるピン）</li>
+          <li>自分のピンのみ表示（フィルタリング機能）</li>
+          <li>地図の共有（自分のピンを他人に見せることができる）</li>
+          <li>マイエリア設定（よく使うエリアを登録）</li>
+        </ul>
+        <p class="mt-2 text-sm text-gray-600">※ログインしなくても、ピンの閲覧・投稿・削除は可能です</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">📍 マイエリア機能</h3>
+        <p>ヘッダーの「マイエリア設定」から、よく使うエリアの位置を登録できます。登録後、「マイエリア」ボタンをクリックすると、その位置に地図が移動します。</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">🔗 地図の共有</h3>
+        <p class="mb-2">ログイン後、「共有」ボタンをクリックすると、自分のピン（公開・非公開両方）を閲覧できるURLが生成されます。</p>
+        <p class="text-sm text-gray-600">このURLを共有すると、他のユーザーがあなたのピンを見ることができます。共有URLを再発行すると、以前のURLは無効になります。</p>
+      </div>
+      
+      <div>
+        <h3 class="font-semibold mb-2">🏙️ 都市ナビゲーション</h3>
+        <p>ヘッダー下の都市名（東京・大阪など）をクリックすると、その都市の位置に地図が移動します。</p>
       </div>
     </div>
     <div class="mt-6 flex justify-end">
@@ -241,6 +358,40 @@
   </div>
 </div>
 
+<!-- モーダル：共有マップ -->
+<div id="share-map-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">地図を共有</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('share-map-modal')">&times;</button>
+    </div>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">共有URL</label>
+        <div class="flex gap-2">
+          <input type="text" id="share-url-input" class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm" readonly>
+          <button id="copy-share-url-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors text-sm">
+            コピー
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">このURLを共有すると、あなたのピン（公開・非公開両方）を閲覧できます</p>
+      </div>
+      
+      <div id="share-url-status" class="hidden text-sm"></div>
+      
+      <div class="mt-6 flex justify-end gap-2">
+        <button id="regenerate-share-url-btn" class="bg-gray-200 border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 transition-colors">
+          再発行
+        </button>
+        <button type="button" onclick="closeModal('share-map-modal')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- モーダル：ピン登録 -->
 <div id="pin-registration-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
   <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
@@ -288,6 +439,16 @@
         </select>
       </div>
       
+      <% if user_signed_in? %>
+      <div>
+        <label class="block text-sm font-medium mb-1">公開設定</label>
+        <select id="reg-visibility" class="w-full border border-gray-300 rounded px-3 py-2" required>
+          <option value="public">公開（みんなに見える）</option>
+          <option value="private">非公開（自分だけ）</option>
+        </select>
+      </div>
+      <% end %>
+      
       <div class="mt-6 flex justify-end gap-2">
         <button type="button" onclick="closeModal('pin-registration-modal')" class="bg-gray-200 border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 transition-colors">
           キャンセル
@@ -328,13 +489,98 @@
         <label class="w-24 text-sm font-medium">天候</label>
         <input type="text" id="modal-weather" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
       </div>
+      
+      <div class="flex items-center">
+        <label class="w-24 text-sm font-medium">登録日時</label>
+        <input type="text" id="modal-created-at" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
+      
+      <div id="modal-edited-at-container" class="hidden flex items-center">
+        <label class="w-24 text-sm font-medium">最終編集</label>
+        <input type="text" id="modal-edited-at" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
+      
+      <div id="modal-visibility-container" class="hidden flex items-center">
+        <label class="w-24 text-sm font-medium">公開設定</label>
+        <input type="text" id="modal-visibility" class="flex-1 border border-gray-300 rounded px-3 py-2 bg-gray-100" readonly>
+      </div>
     </div>
     
-    <div class="flex justify-end">
+    <div class="flex justify-end gap-2">
+      <button id="modal-edit-btn" class="hidden bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors">
+        編集
+      </button>
       <button id="modal-delete-btn" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-400">
         削除
       </button>
     </div>
+  </div>
+</div>
+
+<!-- モーダル：ピン編集 -->
+<div id="pin-edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">ピン編集</h2>
+      <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('pin-edit-modal')">&times;</button>
+    </div>
+    
+    <form id="pin-edit-form" class="space-y-4">
+      <!-- エラー表示エリア -->
+      <div id="pin-edit-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm"></div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">金額（円）</label>
+        <input type="number" id="edit-price" class="w-full border border-gray-300 rounded px-3 py-2" required min="3000" max="9999" step="1">
+        <p class="text-xs text-gray-500 mt-1">※3000円以上9999円以下の金額を入力してください</p>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">配達距離（km）</label>
+        <input type="number" id="edit-distance" class="w-full border border-gray-300 rounded px-3 py-2" required min="0.1" max="99.9" step="0.1">
+        <p class="text-xs text-gray-500 mt-1">※0.1km以上99.9km以下を入力してください（小数点1桁まで）</p>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">時間帯</label>
+        <select id="edit-time-slot" class="w-full border border-gray-300 rounded px-3 py-2" required>
+          <option value="">選択してください</option>
+          <option value="朝">朝</option>
+          <option value="昼">昼</option>
+          <option value="夕方">夕方</option>
+          <option value="夜">夜</option>
+          <option value="深夜">深夜</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">天候</label>
+        <select id="edit-weather" class="w-full border border-gray-300 rounded px-3 py-2" required>
+          <option value="">選択してください</option>
+          <option value="晴れ">晴れ</option>
+          <option value="曇り">曇り</option>
+          <option value="雨">雨</option>
+          <option value="雪">雪</option>
+        </select>
+      </div>
+      
+      <div id="edit-visibility-section" <%= 'class="hidden"' unless user_signed_in? %>>
+        <label class="block text-sm font-medium mb-1">公開設定</label>
+        <select id="edit-visibility" class="w-full border border-gray-300 rounded px-3 py-2" required>
+          <option value="public">公開（みんなに見える）</option>
+          <option value="private">非公開（自分だけ）</option>
+        </select>
+      </div>
+      
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('pin-edit-modal')" class="bg-gray-200 border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 transition-colors">
+          キャンセル
+        </button>
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
+          保存
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
