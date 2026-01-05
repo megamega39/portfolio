@@ -57,6 +57,7 @@ const ERROR_MESSAGES = {
     GEOLOCATION_ERROR: (message) => `現在地の取得に失敗しました: ${message}`,
     GEOLOCATION_NOT_SUPPORTED: "このブラウザは位置情報をサポートしていません",
     MY_AREA_SAVE_FAILED: "マイエリアの保存に失敗しました",
+    MY_AREA_NOT_SET: "マイエリアが未設定です。メニューから設定してください",
     SHARE_URL_GET_FAILED: "共有URLの取得に失敗しました",
     SHARE_URL_REGENERATE_FAILED: "共有URLの再発行に失敗しました",
     URL_COPY_FAILED: "URLのコピーに失敗しました",
@@ -92,7 +93,6 @@ const ELEMENT_IDS = {
     PIN_EDIT_ERROR: "pin-edit-error",
     LOGIN_ERROR: "login-error",
     SIGNUP_ERROR: "signup-error",
-    MY_AREA_ERROR: "my-area-error",
     // ボタン
     LOGO: "logo",
     MOBILE_MENU_BTN: "mobile-menu-btn",
@@ -128,7 +128,6 @@ const ELEMENT_IDS = {
     PIN_EDIT_MODAL: "pin-edit-modal",
     LOGIN_MODAL: "login-modal",
     SIGNUP_MODAL: "signup-modal",
-    MY_AREA_MODAL: "my-area-modal",
     ABOUT_APP_MODAL: "about-app-modal",
     HOW_TO_USE_MODAL: "how-to-use-modal",
     TERMS_MODAL: "terms-modal",
@@ -146,8 +145,7 @@ const MODAL_IDS = [
     ELEMENT_IDS.PIN_MODAL,
     ELEMENT_IDS.PIN_EDIT_MODAL,
     ELEMENT_IDS.LOGIN_MODAL,
-    ELEMENT_IDS.SIGNUP_MODAL,
-    ELEMENT_IDS.MY_AREA_MODAL
+    ELEMENT_IDS.SIGNUP_MODAL
 ];
 
 // ============================================================================
@@ -162,8 +160,7 @@ const appState = {
 const RESTRICTED_MODALS_IN_OPERATION_MODE = [
     ELEMENT_IDS.ABOUT_APP_MODAL,
     ELEMENT_IDS.HOW_TO_USE_MODAL,
-    ELEMENT_IDS.TERMS_MODAL,
-    ELEMENT_IDS.MY_AREA_MODAL
+    ELEMENT_IDS.TERMS_MODAL
 ];
 
 // 操作モード中に無効化するボタンのIDリスト
@@ -321,7 +318,7 @@ function initMap() {
             createMapWithCenter([myArea.lng, myArea.lat], myArea.zoom);
             // 都市リンクのハイライトをクリア
             clearCityLinksHighlight();
-            // マイエリアボタンをハイライト
+            // マイエリアボタンをハイライト（初期表示のみ、手動操作で解除される）
             const myAreaBtn = DOMCache.get("my-area-btn");
             if (myAreaBtn) {
                 highlightButton(myAreaBtn);
@@ -443,6 +440,9 @@ function createMapWithCenter(center, zoom) {
     window.__map = map;
     window.__updatePinVisibility = updatePinVisibility; // グローバルに公開（必要に応じて）
 
+    // 地図の手動操作を検知してボタンのハイライトを解除
+    initMapInteractionHandlers(map);
+
     // 都市リンクの初期化
     initCityLinks(map);
 
@@ -500,14 +500,16 @@ function initMyAreaButton(map) {
 
             // マイエリアボタンをハイライト
             highlightButton(myAreaBtn);
+
+            // 1秒後に自動解除
+            setTimeout(() => {
+                clearMyAreaButtonHighlight();
+            }, 1000);
         } else {
-            // マイエリアが未登録の場合は設定モーダルを開く
-            openModal("my-area-modal");
+            // マイエリアが未登録の場合はマイエリア選択モードを有効化
+            enableMyAreaSelectionMode();
         }
     });
-
-    // マイエリア設定モーダルのイベントリスナー
-    initMyAreaModal(map);
 }
 
 // 都市リンクのハイライトをクリア
@@ -526,25 +528,29 @@ function clearMyAreaButtonHighlight() {
     }
 }
 
-// マイエリア設定モーダルの初期化（旧実装、互換性のため残す）
-function initMyAreaModal(map) {
-    // 旧実装は削除し、マイエリア選択モードに移行
-    // この関数は空にしておく（既存の呼び出しがあるため）
+// 都市ボタンとマイエリアボタンのハイライトをすべて解除
+function clearNavigationHighlights() {
+    clearCityLinksHighlight();
+    clearMyAreaButtonHighlight();
 }
 
-// マイエリア情報表示を更新
-function updateMyAreaInfo(lat, lng, zoom) {
-    const infoDiv = DOMCache.get("my-area-info");
-    const latDisplay = DOMCache.get("my-area-lat-display");
-    const lngDisplay = DOMCache.get("my-area-lng-display");
-    const zoomDisplay = DOMCache.get("my-area-zoom-display");
 
-    if (infoDiv && latDisplay && lngDisplay && zoomDisplay) {
-        latDisplay.textContent = lat.toFixed(6);
-        lngDisplay.textContent = lng.toFixed(6);
-        zoomDisplay.textContent = zoom.toFixed(1);
-        infoDiv.classList.remove("hidden");
-    }
+// 地図の手動操作を検知してボタンのハイライトを解除
+function initMapInteractionHandlers(map) {
+    // ドラッグ開始時
+    map.on('dragstart', () => {
+        clearNavigationHighlights();
+    });
+
+    // ズーム開始時（マウスホイール、ピンチ操作など）
+    map.on('zoomstart', () => {
+        clearNavigationHighlights();
+    });
+
+    // マウスホイール操作時（zoomstartが発火しない場合もあるため）
+    map.getCanvas().addEventListener('wheel', () => {
+        clearNavigationHighlights();
+    }, { passive: true });
 }
 
 // 都市リンクの初期化
@@ -574,11 +580,23 @@ function initCityLinks(map) {
 
                 // マイエリアボタンのハイライトをクリア
                 clearMyAreaButtonHighlight();
+
+                // 1秒後に自動解除
+                setTimeout(() => {
+                    clearButtonHighlight(link);
+                }, 1000);
+
+                // ハンバーガーメニュー内の都市リンクをクリックした場合はメニューを閉じる
+                const mobileMenuDrawer = document.getElementById("mobile-menu-drawer");
+                if (mobileMenuDrawer && mobileMenuDrawer.contains(link)) {
+                    closeMobileMenu();
+                }
+
             }
         });
     });
 
-    // 初期状態で現在の都市をハイライト
+    // 初期状態で現在の都市をハイライト（初期表示のみ、手動操作で解除される）
     const cityKey = getCityFromUrl();
     const activeLink = document.querySelector(`.city-link[data-city="${cityKey}"]`);
     if (activeLink) {
@@ -1536,6 +1554,12 @@ function initMobileMenu() {
 
     if (mobileMenuBtn && mobileMenu && mobileMenuDrawer) {
         mobileMenuBtn.addEventListener("click", () => {
+            // マイエリア設定モードが有効な場合は閉じる
+            const map = window.__map;
+            if (map && map._myAreaSelectionMode) {
+                cancelMyAreaSelectionMode();
+            }
+
             mobileMenu.classList.remove("hidden");
             // ピン登録ボタンを非表示（ドロワー展開時）
             if (pinRegistrationBtnContainer) {
@@ -1635,7 +1659,6 @@ function initOtherButtons() {
     const mobileShareMapBtn = DOMCache.get(ELEMENT_IDS.MOBILE_SHARE_MAP_BTN);
     const exitSharedMapBtn = DOMCache.get(ELEMENT_IDS.EXIT_SHARED_MAP_BTN);
     const mobileLogoutBtn = DOMCache.get("mobile-logout-btn");
-    const mobileMyAreaBtn = DOMCache.get("mobile-my-area-btn");
     const cityNavContent = DOMCache.get(ELEMENT_IDS.CITY_NAV_CONTENT);
     const cityNavArrow = DOMCache.get(ELEMENT_IDS.CITY_NAV_ARROW);
     const mobileMenu = DOMCache.get(ELEMENT_IDS.MOBILE_MENU);
@@ -1708,13 +1731,15 @@ function initOtherButtons() {
         });
     }
 
-    if (mobileMyAreaBtn) {
-        mobileMyAreaBtn.addEventListener("click", async () => {
-            if (cityNavContent) cityNavContent.classList.add("hidden");
-            if (cityNavArrow) cityNavArrow.style.transform = "rotate(0deg)";
+    // ヘッダーのマイエリアショートカットボタン（スマホのみ）
+    const mobileHeaderMyAreaBtn = DOMCache.get("mobile-header-my-area-btn");
+    if (mobileHeaderMyAreaBtn) {
+        mobileHeaderMyAreaBtn.addEventListener("click", async () => {
             const myArea = await loadMyArea();
-            if (window.__map && myArea) {
-                window.__map.flyTo({
+            const map = window.__map;
+            if (map && myArea) {
+                // マイエリアが設定されている場合は移動
+                map.flyTo({
                     center: [myArea.lng, myArea.lat],
                     zoom: myArea.zoom,
                     duration: MAP_CONFIG.FLY_TO_DURATION
@@ -1723,9 +1748,14 @@ function initOtherButtons() {
                 const myAreaBtn = DOMCache.get("my-area-btn");
                 if (myAreaBtn) {
                     highlightButton(myAreaBtn);
+                    // 1秒後に自動解除
+                    setTimeout(() => {
+                        clearMyAreaButtonHighlight();
+                    }, 1000);
                 }
-            } else if (window.__map) {
-                openModal(ELEMENT_IDS.MY_AREA_MODAL);
+            } else {
+                // マイエリアが未設定の場合はトーストでメッセージを表示
+                showToast(ERROR_MESSAGES.MY_AREA_NOT_SET, "error");
             }
         });
     }
@@ -2844,7 +2874,16 @@ async function saveMyAreaSelection() {
             disableMyAreaSelectionMode();
             showToast(SUCCESS_MESSAGES.MY_AREA_SAVED, "success");
         } else {
-            showToast(result.error || ERROR_MESSAGES.MY_AREA_SAVE_FAILED, "error");
+            // 401エラーの場合は再ログインメッセージを表示してページをリロード
+            if (result.requiresRelogin) {
+                showToast(ERROR_MESSAGES.RELOGIN_REQUIRED, "error");
+                // トースト通知を表示した後、少し遅延してからページをリロード
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showToast(result.error || ERROR_MESSAGES.MY_AREA_SAVE_FAILED, "error");
+            }
         }
     } else {
         // 未ログイン時：localStorageに保存
