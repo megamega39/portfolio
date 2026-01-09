@@ -43,6 +43,48 @@ Rails.application.configure do
 
   config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
 
+  # ============================================
+  # ローカル開発環境のメール設定
+  # 環境変数で設定するか、development.local.rb に記述してください
+  # ============================================
+  
+  # 環境変数またはdevelopment.local.rbから設定を読み込む
+  resend_api_key = ENV["RESEND_API_KEY"]
+  mailer_from = ENV["MAILER_FROM"]
+  mailer_domain = ENV.fetch("MAILER_DOMAIN", "localhost")
+
+  # development.local.rb が存在する場合は読み込む（環境変数より優先）
+  local_env_file = Rails.root.join("config", "environments", "development.local.rb")
+  if File.exist?(local_env_file)
+    require local_env_file
+    resend_api_key ||= config.resend_api_key if config.respond_to?(:resend_api_key)
+    mailer_from ||= config.mailer_from if config.respond_to?(:mailer_from)
+    mailer_domain = config.mailer_domain if config.respond_to?(:mailer_domain) && config.mailer_domain
+  end
+
+  # 設定をconfigに保存
+  config.resend_api_key = resend_api_key
+  config.mailer_from = mailer_from || "noreply@example.com"
+  config.mailer_domain = mailer_domain
+
+  # Resend SMTP設定
+  if config.resend_api_key.present?
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = {
+      address: "smtp.resend.com",
+      port: 587,
+      domain: config.mailer_domain,
+      user_name: "resend",
+      password: config.resend_api_key,
+      authentication: :plain,
+      enable_starttls_auto: true
+    }
+  else
+    # Resend APIキーが設定されていない場合は、ファイルに出力（tmp/mail/に保存されます）
+    config.action_mailer.delivery_method = :file
+    config.action_mailer.file_settings = { location: Rails.root.join("tmp", "mail") }
+  end
+
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
 

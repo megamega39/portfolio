@@ -24,7 +24,13 @@ Devise.setup do |config|
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
   # with default "from" parameter.
-  config.mailer_sender = "please-change-me-at-config-initializers-devise@example.com"
+  # 開発環境ではconfig/environments/development.rbのmailer_fromを使用
+  # 本番環境では環境変数MAILER_FROMを使用
+  config.mailer_sender = if Rails.env.development?
+    Rails.application.config.mailer_from || ENV.fetch("MAILER_FROM", "noreply@example.com")
+  else
+    ENV.fetch("MAILER_FROM", "noreply@example.com")
+  end
 
   # Configure the class responsible to send e-mails.
   # config.mailer = 'Devise::Mailer'
