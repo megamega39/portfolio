@@ -34,6 +34,7 @@ ja:
       expired: "の有効期限が切れました。新しく登録してください。"
       not_found: "は見つかりませんでした。"
       not_locked: "は凍結されていません。"
+      invalid: "は不正な値です。"
       not_saved:
         one: "エラーが発生したため、%{resource}を保存できませんでした:"
         other: "%{count}件のエラーが発生したため、%{resource}を保存できませんでした:"
@@ -50,7 +51,10 @@ ja:
               too_short: "は%{count}文字以上で入力してください"
               confirmation: "とパスワード（確認）が一致しません"
               blank: "を入力してください"
+              same_as_current: "現在のパスワードと同じパスワードは設定できません。別のパスワードを入力してください。"
             user_name:
               taken: "は既に使用されています"
               blank: "を入力してください"
+            reset_password_token:
+              invalid: "は無効または期限切れです。新しいパスワード再設定リンクをリクエストしてください。"
 

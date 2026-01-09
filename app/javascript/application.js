@@ -57,6 +57,7 @@ const ERROR_MESSAGES = {
     LOGIN_FAILED: "ログインに失敗しました",
     SIGNUP_FAILED: "登録に失敗しました",
     PASSWORD_MISMATCH: "パスワードが一致しません",
+    EMAIL_MISMATCH: "メールアドレスが一致しません",
     PIN_REGISTRATION_FAILED: "ピンの登録に失敗しました",
     PIN_EDIT_FAILED: "ピンの編集に失敗しました",
     PIN_DELETE_FAILED: "削除に失敗しました",
@@ -74,6 +75,7 @@ const ERROR_MESSAGES = {
 
 // 成功メッセージ定数
 const SUCCESS_MESSAGES = {
+    PASSWORD_RESET: "パスワードを変更しました。ログインしてください。",
     PIN_REGISTERED: "ピンを登録しました",
     PIN_EDITED: "ピンを編集しました",
     PIN_DELETED: "ピンを削除しました",
@@ -129,12 +131,16 @@ const ELEMENT_IDS = {
     PIN_EDIT_FORM: "pin-edit-form",
     LOGIN_FORM: "login-form",
     SIGNUP_FORM: "signup-form",
+    FORGOT_PASSWORD_FORM: "forgot-password-form",
+    RESET_PASSWORD_FORM: "reset-password-form",
     // モーダル
     PIN_MODAL: "pin-modal",
     PIN_REGISTRATION_MODAL: "pin-registration-modal",
     PIN_EDIT_MODAL: "pin-edit-modal",
     LOGIN_MODAL: "login-modal",
     SIGNUP_MODAL: "signup-modal",
+    FORGOT_PASSWORD_MODAL: "forgot-password-modal",
+    RESET_PASSWORD_MODAL: "reset-password-modal",
     ABOUT_APP_MODAL: "about-app-modal",
     HOW_TO_USE_MODAL: "how-to-use-modal",
     TERMS_MODAL: "terms-modal",
@@ -152,7 +158,9 @@ const MODAL_IDS = [
     ELEMENT_IDS.PIN_MODAL,
     ELEMENT_IDS.PIN_EDIT_MODAL,
     ELEMENT_IDS.LOGIN_MODAL,
-    ELEMENT_IDS.SIGNUP_MODAL
+    ELEMENT_IDS.SIGNUP_MODAL,
+    ELEMENT_IDS.FORGOT_PASSWORD_MODAL,
+    ELEMENT_IDS.RESET_PASSWORD_MODAL
 ];
 
 // ============================================================================
@@ -1851,6 +1859,8 @@ function initForms() {
     initPinRegistrationForm();
     initPinEditForm();
     initModalLinks();
+    initForgotPasswordForm();
+    initResetPasswordForm();
 }
 
 // ログインフォームの初期化
@@ -1893,10 +1903,18 @@ function initSignupForm() {
 
             const userName = DOMCache.get("signup-user-name")?.value || "";
             const email = DOMCache.get("signup-email")?.value || "";
+            const emailConfirmation = DOMCache.get("signup-email-confirmation")?.value || "";
             const password = DOMCache.get("signup-password")?.value || "";
             const passwordConfirmation = DOMCache.get("signup-password-confirmation")?.value || "";
             const errorDiv = DOMCache.get(ELEMENT_IDS.SIGNUP_ERROR);
 
+            // メールアドレスの確認
+            if (email !== emailConfirmation) {
+                showFormError(ELEMENT_IDS.SIGNUP_ERROR, ERROR_MESSAGES.EMAIL_MISMATCH);
+                return;
+            }
+
+            // パスワードの確認
             if (password !== passwordConfirmation) {
                 showFormError(ELEMENT_IDS.SIGNUP_ERROR, ERROR_MESSAGES.PASSWORD_MISMATCH);
                 return;
@@ -1952,6 +1970,122 @@ function initModalLinks() {
             e.preventDefault();
             closeModal(ELEMENT_IDS.SIGNUP_MODAL);
             openModal(ELEMENT_IDS.LOGIN_MODAL);
+        });
+    }
+
+    const forgotPasswordLink = DOMCache.get("forgot-password-link");
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            closeModal(ELEMENT_IDS.LOGIN_MODAL);
+            openModal(ELEMENT_IDS.FORGOT_PASSWORD_MODAL);
+        });
+    }
+}
+
+// パスワード再設定リクエストフォームの初期化
+function initForgotPasswordForm() {
+    const forgotPasswordForm = DOMCache.get(ELEMENT_IDS.FORGOT_PASSWORD_FORM);
+    if (forgotPasswordForm) {
+        forgotPasswordForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = DOMCache.get("forgot-password-email")?.value || "";
+            const errorDiv = DOMCache.get("forgot-password-error");
+            const successDiv = DOMCache.get("forgot-password-success");
+
+            // エラーと成功メッセージをクリア
+            if (errorDiv) {
+                errorDiv.classList.add("hidden");
+                errorDiv.textContent = "";
+            }
+            if (successDiv) {
+                successDiv.classList.add("hidden");
+                successDiv.textContent = "";
+            }
+
+            const result = await apiRequest("/users/password", {
+                method: "POST",
+                body: {
+                    user: {
+                        email: email
+                    }
+                }
+            });
+
+            if (result.success) {
+                if (successDiv) {
+                    successDiv.textContent = "パスワード再設定用のリンクをメールで送信しました。メールをご確認ください。";
+                    successDiv.classList.remove("hidden");
+                }
+                // フォームをリセット
+                forgotPasswordForm.reset();
+            } else {
+                if (errorDiv) {
+                    const errorMessage = result.error || result.errors?.[0] || "メールアドレスが見つかりませんでした。";
+                    errorDiv.textContent = errorMessage;
+                    errorDiv.classList.remove("hidden");
+                }
+            }
+        });
+    }
+}
+
+// パスワード再設定フォームの初期化
+function initResetPasswordForm() {
+    const resetPasswordForm = DOMCache.get(ELEMENT_IDS.RESET_PASSWORD_FORM);
+    if (resetPasswordForm) {
+        resetPasswordForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const token = DOMCache.get("reset-password-token")?.value || "";
+            const password = DOMCache.get("reset-password-password")?.value || "";
+            const passwordConfirmation = DOMCache.get("reset-password-password-confirmation")?.value || "";
+            const errorDiv = DOMCache.get("reset-password-error");
+
+            if (password !== passwordConfirmation) {
+                if (errorDiv) {
+                    errorDiv.textContent = "パスワードが一致しません。";
+                    errorDiv.classList.remove("hidden");
+                }
+                return;
+            }
+
+            // エラーメッセージをクリア
+            if (errorDiv) {
+                errorDiv.classList.add("hidden");
+                errorDiv.textContent = "";
+            }
+
+            const result = await apiRequest("/users/password", {
+                method: "PUT",
+                body: {
+                    user: {
+                        reset_password_token: token,
+                        password: password,
+                        password_confirmation: passwordConfirmation
+                    }
+                }
+            });
+
+            if (result.success) {
+                closeModal(ELEMENT_IDS.RESET_PASSWORD_MODAL);
+                // ログインモーダルを開く
+                openModal(ELEMENT_IDS.LOGIN_MODAL);
+                // 成功メッセージをトースト通知で表示
+                showToast(SUCCESS_MESSAGES.PASSWORD_RESET, "success");
+            } else {
+                if (errorDiv) {
+                    let errorMessage = "パスワードの変更に失敗しました。";
+                    if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
+                        errorMessage = translateDeviseErrors(result.errors).join("、");
+                    } else if (result.error) {
+                        errorMessage = translateDeviseError(result.error);
+                    }
+                    errorDiv.textContent = errorMessage;
+                    errorDiv.classList.remove("hidden");
+                }
+            }
         });
     }
 }
@@ -2979,6 +3113,20 @@ function initializeApp() {
     // ボタンの状態を更新
     updateRestrictedButtonsState();
     // initMap内でloadPins(map)が呼ばれるため、ここでの重複処理は不要
+
+    // URLパラメータからパスワード再設定トークンを取得してモーダルを開く
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetPasswordToken = urlParams.get("reset_password_token");
+    if (resetPasswordToken) {
+        const tokenInput = DOMCache.get("reset-password-token");
+        if (tokenInput) {
+            tokenInput.value = resetPasswordToken;
+            openModal(ELEMENT_IDS.RESET_PASSWORD_MODAL);
+            // URLからトークンを削除（セキュリティのため）
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
