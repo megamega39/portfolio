@@ -27,9 +27,11 @@ class Api::ShareMapController < ApplicationController
       }, status: :ok
     rescue => e
       Rails.logger.error "Share map token generation error: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
+      # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+      error_message = Rails.env.production? ? "共有URLの生成に失敗しました" : "共有URLの生成に失敗しました: #{e.message}"
       render json: {
         status: "error",
-        error: "共有URLの生成に失敗しました: #{e.message}"
+        error: error_message
       }, status: :internal_server_error
     end
   end

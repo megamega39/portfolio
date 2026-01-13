@@ -63,15 +63,19 @@ class Api::MyAreaController < ApplicationController
       end
     rescue ActionController::ParameterMissing => e
       Rails.logger.error "パラメータ不足: #{e.message}"
+      # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+      error_message = Rails.env.production? ? "パラメータが不足しています" : "パラメータが不足しています: #{e.message}"
       render json: {
         status: "error",
-        error: "パラメータが不足しています: #{e.message}"
+        error: error_message
       }, status: :bad_request
     rescue => e
       Rails.logger.error "マイエリア更新例外: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
+      # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+      error_message = Rails.env.production? ? "マイエリアの更新に失敗しました" : e.message
       render json: {
         status: "error",
-        error: e.message
+        error: error_message
       }, status: :internal_server_error
     end
   end

@@ -76,9 +76,11 @@ class Api::PinsController < ApplicationController
     rescue => e
       # 予期しないエラーをキャッチしてJSON形式で返す
       Rails.logger.error "Pin creation error: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
+      # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+      error_message = Rails.env.production? ? "ピンの作成に失敗しました" : "ピンの作成に失敗しました: #{e.message}"
       render json: {
         status: "error",
-        error: "ピンの作成に失敗しました: #{e.message}"
+        error: error_message
       }, status: :internal_server_error
     end
   end
@@ -254,9 +256,11 @@ class Api::PinsController < ApplicationController
   # indexアクションのエラーを処理
   def handle_index_error(error)
     Rails.logger.error "Pin index error: #{error.class} - #{error.message}\n#{error.backtrace.join("\n")}"
+    # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+    error_message = Rails.env.production? ? "ピンの取得に失敗しました" : "ピンの取得に失敗しました: #{error.message}"
     render json: {
       status: "error",
-      error: "ピンの取得に失敗しました: #{error.message}"
+      error: error_message
     }, status: :internal_server_error
   end
 
@@ -363,18 +367,22 @@ class Api::PinsController < ApplicationController
   end
 
   def parameter_missing(exception)
+    # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+    error_message = Rails.env.production? ? "必須パラメータが不足しています" : "Parameter missing: #{exception.param}"
     render json: {
       status: "error",
-      error: "Parameter missing: #{exception.param}"
+      error: error_message
     }, status: :bad_request
   end
 
   def handle_standard_error(exception)
     # すべての予期しないエラーをJSON形式で返す
     Rails.logger.error "API Error: #{exception.class} - #{exception.message}\n#{exception.backtrace.join("\n")}"
+    # 本番環境では詳細なエラーメッセージを返さない（セキュリティ対策）
+    error_message = Rails.env.production? ? "サーバーエラーが発生しました" : "サーバーエラーが発生しました: #{exception.message}"
     render json: {
       status: "error",
-      error: "サーバーエラーが発生しました: #{exception.message}"
+      error: error_message
     }, status: :internal_server_error
   end
 end
